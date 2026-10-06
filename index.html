@@ -1,0 +1,798 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wealthy</title>
+<meta name="description" content="See where your verified net worth ranks in your city, state, country and the world.">
+<meta name="theme-color" content="#F7F6F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#161513" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Wealthy">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400..700&display=swap">
+<style>
+:root {
+  --font: 'Gotham', 'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --ground: #F7F6F3;
+  --surface: #FFFFFF;
+  --surface-2: #EFECE6;
+  --seg: #ECE8E1;
+  --ink: #1F1D1A;
+  --text-2: #3A3631;
+  --muted: #6B665E;
+  --line: #E4E0D8;
+  --line-soft: #ECE9E3;
+  --border: #D9D4CC;
+  --accent: #7A6853;
+  --on-ink: #F7F6F3;
+  --track-off: #C9C2B8;
+  --mix-1: #7A6853;
+  --mix-2: #1F1D1A;
+  --mix-3: #A89C8C;
+  --mix-4: #C7BEB1;
+  --mix-5: #DDD6CB;
+  --av1: #DCD5CA; --av2: #D9CFC4; --av3: #CDD2D6; --av4: #D8CDCB; --av5: #D3D3C6; --av6: #D2CED6;
+  --scrim: rgba(31, 29, 26, 0.4);
+  color-scheme: light dark;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #161513; --surface: #1F1D1A; --surface-2: #2A2723; --seg: #24221E;
+    --ink: #F2EFE9; --text-2: #D8D3CA; --muted: #A39E95; --line: #34302B; --line-soft: #2B2824;
+    --border: #3F3A34; --accent: #C7B49A; --on-ink: #161513; --track-off: #4A453E;
+    --mix-1: #C7B49A; --mix-2: #F2EFE9; --mix-3: #8C8172; --mix-4: #6A6157; --mix-5: #4A443D;
+    --av1: #3A352E; --av2: #3B3430; --av3: #30353A; --av4: #3A3132; --av5: #34352D; --av6: #35323A;
+    --scrim: rgba(0, 0, 0, 0.55);
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #161513; --surface: #1F1D1A; --surface-2: #2A2723; --seg: #24221E;
+  --ink: #F2EFE9; --text-2: #D8D3CA; --muted: #A39E95; --line: #34302B; --line-soft: #2B2824;
+  --border: #3F3A34; --accent: #C7B49A; --on-ink: #161513; --track-off: #4A453E;
+  --mix-1: #C7B49A; --mix-2: #F2EFE9; --mix-3: #8C8172; --mix-4: #6A6157; --mix-5: #4A443D;
+  --av1: #3A352E; --av2: #3B3430; --av3: #30353A; --av4: #3A3132; --av5: #34352D; --av6: #35323A;
+  --scrim: rgba(0, 0, 0, 0.55);
+}
+*, *::before, *::after { box-sizing: inherit; }
+[hidden] { display: none !important; }
+html { height: 100%; background: var(--ground); scroll-padding-top: env(safe-area-inset-top, 0px); -webkit-text-size-adjust: 100%; }
+body { margin: 0; height: 100%; background: var(--ground); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.4; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+button, input, textarea { font-family: inherit; }
+a { color: inherit; }
+img { max-width: 100%; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.sr-file { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+
+/* Layout */
+.app { max-width: 440px; min-height: 100%; margin: 0 auto; }
+.screen { padding: 20px 20px 32px; display: flex; flex-direction: column; gap: 22px; }
+.screen.has-tabs { padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)); }
+.screen.has-dock { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
+.screen--welcome { min-height: 100%; justify-content: space-between; padding: 40px 24px 28px; gap: 32px; }
+.stack-lg { display: flex; flex-direction: column; gap: 32px; }
+.stack-md { display: flex; flex-direction: column; gap: 14px; }
+.stack-sm { display: flex; flex-direction: column; gap: 12px; }
+.stack-xs { display: flex; flex-direction: column; gap: 6px; }
+.stack-2 { display: flex; flex-direction: column; gap: 2px; }
+.grow { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.center { text-align: center; align-items: center; }
+
+/* Type */
+.wordmark { font-weight: 600; font-size: 18px; letter-spacing: 0.32em; text-transform: uppercase; }
+.wordmark--xl { font-size: 34px; letter-spacing: 0.3em; line-height: 1; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.eyebrow--accent { color: var(--accent); font-weight: 700; }
+.title { margin: 0; font-size: 40px; font-weight: 500; line-height: 1.05; letter-spacing: -0.02em; }
+.h-xl { margin: 0; font-size: 32px; font-weight: 500; line-height: 1.12; letter-spacing: -0.02em; }
+.h2 { margin: 0; font-size: 20px; font-weight: 500; letter-spacing: -0.01em; }
+.lede { margin: 0; font-size: 15px; line-height: 1.55; color: var(--muted); }
+.small { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.fine { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); text-align: center; }
+.opt-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Controls */
+.topbar { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+.icon-btn { width: 44px; height: 44px; flex-shrink: 0; border-radius: 22px; border: 1px solid var(--border); background: transparent; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; padding: 0; cursor: pointer; text-decoration: none; }
+.icon-btn--solid { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+.btn { width: 100%; min-height: 54px; padding: 0 20px; border-radius: 27px; border: 1px solid transparent; font-size: 16px; font-weight: 700; line-height: 1; display: inline-flex; align-items: center; justify-content: center; text-align: center; text-decoration: none; cursor: pointer; }
+.btn--primary { background: var(--ink); color: var(--on-ink); }
+.btn--outline { background: transparent; color: var(--ink); border-color: var(--border); min-height: 48px; font-size: 15px; font-weight: 600; }
+.btn--sm { width: auto; min-height: 44px; padding: 0 18px; border-radius: 22px; font-size: 14px; font-weight: 600; }
+.btn--text { width: auto; min-height: 44px; padding: 0; background: none; border: 0; color: var(--muted); font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; align-self: center; }
+.row-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+.row-btns.full > * { flex: 1; }
+.pill { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.pill--accent { color: var(--accent); }
+.seg { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; background: var(--seg); border-radius: 14px; }
+.seg button { min-height: 44px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--on-ink); }
+.chips-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-btn { min-height: 44px; padding: 0 16px; border-radius: 22px; border: 1px solid var(--border); background: transparent; color: var(--ink); font-size: 14px; font-weight: 600; cursor: pointer; }
+.chip-btn[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); font-size: 13px; }
+
+/* Cards and rows */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.card--tight { gap: 10px; }
+.card-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.card-note { margin: 0; display: flex; gap: 8px; align-items: flex-start; font-size: 12px; line-height: 1.45; color: var(--muted); border-top: 1px solid var(--line); padding-top: 12px; }
+.card-note svg { flex-shrink: 0; margin-top: 1px; }
+.rank-num { font-size: 42px; font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; color: var(--accent); font-variant-numeric: lining-nums tabular-nums; }
+.stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; border-top: 1px solid var(--line); padding-top: 14px; }
+.stat-big { font-size: 20px; font-weight: 600; }
+.list-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.row { display: flex; align-items: center; gap: 12px; min-height: 66px; border-bottom: 1px solid var(--line-soft); }
+.row:last-child { border-bottom: 0; }
+.row .rank { width: 24px; flex-shrink: 0; font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.name-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.name { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.end { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+.amount { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.amount--muted { color: var(--muted); }
+.move { font-size: 12px; font-weight: 600; color: var(--muted); }
+.move--up { color: var(--accent); }
+.status-flag { font-size: 12px; font-weight: 600; color: var(--accent); }
+.verified { flex-shrink: 0; }
+.verified circle { fill: var(--ink); }
+.verified path { fill: none; stroke: var(--ground); }
+.avatar { border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: var(--ink); flex-shrink: 0; overflow: hidden; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar--ring { border: 2px solid var(--accent); }
+.icon-box { width: 40px; height: 40px; border-radius: 12px; background: var(--surface-2); color: var(--ink); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* Welcome */
+.ladder { display: flex; flex-direction: column; }
+.ladder-row { display: flex; justify-content: space-between; align-items: baseline; padding-top: 12px; padding-bottom: 12px; border-top: 1px solid var(--line); font-size: 24px; font-weight: 500; letter-spacing: -0.01em; }
+.ladder-row:last-child { border-bottom: 1px solid var(--line); }
+.ladder-hash { color: var(--accent); font-size: 20px; }
+
+/* Onboarding */
+.step-head { display: flex; align-items: center; gap: 14px; }
+.progress { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-top: 4px; }
+.progress span { height: 4px; border-radius: 2px; background: var(--line); }
+.progress span.on { background: var(--accent); }
+.opts { display: flex; flex-direction: column; }
+.opt { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 68px; padding: 0; border: 0; border-bottom: 1px solid var(--line-soft); background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
+.opt:last-child { border-bottom: 0; }
+.linked { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: var(--accent); flex-shrink: 0; }
+.chev { color: var(--muted); display: inline-flex; flex-shrink: 0; }
+.note { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 14px; background: var(--surface-2); }
+.note p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.note svg { flex-shrink: 0; margin-top: 1px; }
+.dock { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: 100%; max-width: 440px; padding: 12px 20px calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ground); border-top: 1px solid var(--line); z-index: 10; }
+.photo-row { display: flex; align-items: center; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 8px; }
+.field label { font-size: 13px; font-weight: 600; }
+.input { width: 100%; min-height: 48px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font-size: 16px; }
+.textarea { min-height: 128px; padding: 12px 14px; line-height: 1.5; resize: none; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; letter-spacing: -0.01em; }
+.radio { display: flex; align-items: center; gap: 12px; min-height: 58px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--line); cursor: pointer; }
+.radio.is-on { border-color: var(--accent); background: var(--surface); }
+.radio input { width: 20px; height: 20px; margin: 0; flex-shrink: 0; accent-color: var(--accent); }
+.switch-row { display: flex; align-items: center; gap: 14px; min-height: 72px; border-bottom: 1px solid var(--line-soft); }
+.switch { min-width: 56px; min-height: 44px; padding: 0; border: 0; background: transparent; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+.switch .track { width: 52px; height: 32px; border-radius: 16px; padding: 3px; background: var(--track-off); display: flex; justify-content: flex-start; transition: background-color 0.2s; }
+.switch[aria-checked="true"] .track { background: var(--accent); justify-content: flex-end; }
+.switch .knob { width: 26px; height: 26px; border-radius: 13px; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); }
+
+/* Feed */
+.update-text { margin: 0; font-size: 21px; font-weight: 500; line-height: 1.3; letter-spacing: -0.01em; }
+.post { display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid var(--line-soft); }
+.post-head { display: flex; align-items: center; gap: 12px; }
+.post-rank { font-size: 18px; font-weight: 600; color: var(--accent); flex-shrink: 0; }
+.post-label { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+.post-title { font-size: 19px; font-weight: 500; line-height: 1.3; letter-spacing: -0.01em; }
+.post-body { margin: 0; font-size: 15px; line-height: 1.55; color: var(--text-2); overflow-wrap: anywhere; white-space: pre-wrap; }
+.actions { display: flex; align-items: center; gap: 4px; margin-left: -10px; }
+.act { min-height: 44px; padding: 0 10px; border: 0; background: transparent; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.act[aria-pressed="true"] { color: var(--accent); }
+.act[aria-pressed="true"] svg path { fill: currentColor; }
+.act--end { margin-left: auto; }
+.empty { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 12px 0; }
+
+/* Wealth */
+.big-num { margin: 0; font-size: 40px; font-weight: 500; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: lining-nums tabular-nums; }
+.totals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.total { font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.mix-bar { display: flex; gap: 2px; height: 12px; border-radius: 6px; overflow: hidden; }
+.legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; row-gap: 8px; }
+.legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.swatch { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.push { margin-left: auto; }
+
+/* Profile */
+.profile-head { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; }
+.avatar-wrap { position: relative; width: 104px; height: 104px; }
+.camera { position: absolute; right: -6px; bottom: -6px; width: 44px; height: 44px; border-radius: 22px; border: 3px solid var(--ground); background: var(--ink); color: var(--on-ink); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.profile-name { margin: 0; font-size: 30px; font-weight: 500; line-height: 1.15; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.counts { display: flex; gap: 24px; font-size: 14px; color: var(--muted); }
+.counts strong { color: var(--ink); font-size: 16px; }
+.nw { font-size: 40px; font-weight: 600; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: lining-nums; }
+.inline-link { color: var(--ink); font-weight: 600; }
+.tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 4px; }
+.tile-rank { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: var(--accent); font-variant-numeric: lining-nums; }
+.only-you { align-self: flex-start; margin-top: 4px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); font-size: 11px; font-weight: 600; color: var(--muted); }
+
+/* Tab bar, sheet, toast */
+.tabbar { position: fixed; left: 50%; bottom: 0; transform: translateX(-50%); width: 100%; max-width: 440px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--ground); border-top: 1px solid var(--line); z-index: 10; }
+.tabbar a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 48px; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.03em; }
+.tabbar a[aria-current="page"] { color: var(--ink); font-weight: 700; }
+.tabbar a[aria-current="page"] svg { color: var(--accent); }
+.sheet-backdrop { position: fixed; inset: 0; background: var(--scrim); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 440px; background: var(--ground); border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+.sheet-head, .sheet-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.toast { position: fixed; left: 50%; bottom: calc(104px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 8px); max-width: calc(100% - 40px); padding: 10px 16px; border-radius: 999px; background: var(--ink); color: var(--on-ink); font-size: 13px; font-weight: 600; text-align: center; opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s; z-index: 30; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }
+</style>
+</head>
+<body>
+<noscript><p style="padding: 24px">Wealthy needs JavaScript turned on.</p></noscript>
+<div class="app" id="app"></div>
+<nav class="tabbar" id="tabbar" aria-label="Main" hidden>
+  <a href="#rankings" data-tab="rankings"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18M5 20v-6h4v6M10 20V7h4v13M15 20v-9h4v9"/></svg><span>Rankings</span></a>
+  <a href="#feed" data-tab="feed"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Feed</span></a>
+  <a href="#wealth" data-tab="wealth"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12h8.5"/></svg><span>Wealth</span></a>
+  <a href="#profile" data-tab="profile"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8.5" r="4"/><path d="M4.5 20c1.4-3.4 4.3-5 7.5-5s6.1 1.6 7.5 5"/></svg><span>Profile</span></a>
+</nav>
+<div id="sheet-root"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Saved state (this phone only) ---------- */
+  var KEY = 'wealthy-test-v1';
+  var DEFAULTS = {
+    onboarded: false, name: 'Juniper Reyes', photo: null,
+    amount: 'range', loc: 'state', board: true, follow: true,
+    linked: { bank: true, invest: true, home: false, car: false, crypto: false, debts: false, other: false },
+    cheered: [], myPosts: []
+  };
+  function fresh() { return JSON.parse(JSON.stringify(DEFAULTS)); }
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return fresh();
+      var s = Object.assign(fresh(), JSON.parse(raw));
+      s.linked = Object.assign(fresh().linked, s.linked || {});
+      if (!Array.isArray(s.cheered)) s.cheered = [];
+      if (!Array.isArray(s.myPosts)) s.myPosts = [];
+      return s;
+    } catch (e) { return fresh(); }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(S)); }
+    catch (e) {
+      if (S.photo) { toast('That photo is too large to keep. Try a smaller one.'); }
+    }
+  }
+  var S = load();
+  var UI = { scope: 'city', feed: 'following', sheet: false, last: null };
+
+  /* ---------- Sample data ---------- */
+  var SCOPES = {
+    city: { label: 'City', eyebrow: 'City ranking', place: 'Austin', rank: '#1,284', of: 'of 46,210 members in Austin', move: '▲ 41 this month', moveSr: 'Up 41 places this month', topM: '3%', topR: '9%', resLabel: 'of Austin residents, est.',
+      rows: [['HR', 'Halcyon Ridge', 'Real estate · Private equity', '$412.6M', 0], ['MO', 'm.okafor', 'Public equities', '$250M–$500M', 1], ['SS', 'Sixth Street Holdings', 'Real estate', '$198.0M', -1], ['QC', 'quietcompounder', 'Index funds', '$100M–$250M', 3], ['BV', 'Barton & Vale', 'Equities · Crypto', '$96.4M', -2], ['TA', 't.alvarez', 'Business owner', '$50M–$100M', 0]] },
+    state: { label: 'State', eyebrow: 'State ranking', place: 'Texas', rank: '#18,902', of: 'of 611,480 members in Texas', move: '▲ 312 this month', moveSr: 'Up 312 places this month', topM: '4%', topR: '8%', resLabel: 'of Texas residents, est.',
+      rows: [['PT', 'Permian Trust', 'Energy · Land', '$3.10B', 0], ['GM', 'Gulf Meridian', 'Private equity', '$1B–$2.5B', 0], ['LC', 'lonehorn.capital', 'Real estate', '$1.42B', 2], ['BH', 'Bayou Holdings', 'Shipping · Equities', '$1B–$2.5B', -1], ['HC', 'Hill Country Office', 'Land · Equities', '$880.0M', -1], ['SR', 's.rao', 'Founder equity', '$500M–$1B', 4]] },
+    country: { label: 'Country', eyebrow: 'National ranking', place: 'United States', rank: '#241,550', of: 'of 8.2M members in the United States', move: '▲ 2,904 this month', moveSr: 'Up 2,904 places this month', topM: '3%', topR: '8%', resLabel: 'of U.S. households, est.',
+      rows: [['AP', 'Atlas & Pine', 'Technology equity', '$12.8B', 0], ['NH', 'northhaven', 'Private equity', '$10B+', 0], ['CW', 'Coastwise Group', 'Real estate · Media', '$9.06B', 1], ['EL', 'e.lindqvist', 'Founder equity', '$5B–$10B', -1], ['MR', 'Marrow Ridge', 'Hedge funds', '$5B–$10B', 2], ['GT', 'g.tanaka', 'Biotech equity', '$4.71B', 0]] },
+    world: { label: 'World', eyebrow: 'Global ranking', place: 'World', rank: '#1.9M', of: 'of 31.4M members worldwide', move: '▲ 18,240 this month', moveSr: 'Up 18,240 places this month', topM: '7%', topR: '2%', resLabel: 'of adults worldwide, est.',
+      rows: [['MS', 'Meridian Seven', 'Holding company', '$21.3B', 0], ['AP', 'Atlas & Pine', 'Technology equity', '$12.8B', 0], ['KV', 'k.varma', 'Conglomerate', '$10B+', 1], ['NH', 'northhaven', 'Private equity', '$10B+', -1], ['SO', 'Solenne & Oak', 'Luxury goods', '$9.40B', 0], ['CW', 'Coastwise Group', 'Real estate · Media', '$9.06B', 2]] }
+  };
+  var UPDATES = {
+    city: { places: '41', where: 'Austin', rank: '#1,284' },
+    state: { places: '312', where: 'Texas', rank: '#18,902' },
+    country: { places: '2,904', where: 'the United States', rank: '#241,550' }
+  };
+  var POSTS = [
+    { id: 'p1', ini: 'QC', name: 'quietcompounder', where: 'Austin', place: 'austin', time: '2h', rank: '#4', label: 'Milestone', title: "Moved into Austin's top five", body: 'Twelve years of buying the index every payday. Nothing clever, just patient.', cheers: 214, comments: 38, milestone: true },
+    { id: 'p2', ini: 'DK', name: 'dana.k', where: 'Texas', place: 'texas', time: '5h', rank: null, label: 'Milestone', title: 'Net worth crossed zero', body: 'Paid off the last of my student loans this morning. First time my net worth has been positive since I was 19.', cheers: 1206, comments: 96, milestone: true },
+    { id: 'p3', ini: 'SS', name: 'Sixth Street Holdings', where: 'Austin', place: 'austin', time: '1d', rank: '#3', label: 'Verified', title: 'Added a verified property', body: null, cheers: 87, comments: 12, milestone: true }
+  ];
+  var CATS = [
+    { id: 'bank', icon: 'bank', title: 'Bank and cash', sub: 'Checking and savings', linkedSub: '2 accounts linked' },
+    { id: 'invest', icon: 'chart', title: 'Investments and retirement', sub: 'Brokerage, 401(k), IRA', linkedSub: 'Brokerage linked' },
+    { id: 'home', icon: 'house', title: 'Real estate', sub: 'Valued from the property address', linkedSub: '1 property verified' },
+    { id: 'car', icon: 'car', title: 'Vehicles', sub: 'Valued from the VIN', linkedSub: '1 vehicle verified' },
+    { id: 'crypto', icon: 'hex', title: 'Crypto', sub: 'Exchange account or public wallet', linkedSub: '1 wallet verified' },
+    { id: 'debts', icon: 'card', title: 'Loans and debts', sub: 'Required for an accurate net worth', linkedSub: 'Mortgage, auto loan and 3 cards linked' },
+    { id: 'other', icon: 'star', title: 'Other valuables', sub: 'Art, watches, private stakes · not ranked', linkedSub: '1 item added · not ranked' }
+  ];
+  var MIX = [
+    { label: 'Equities', w: 42.45, pct: '42%', c: '--mix-1' },
+    { label: 'Real estate', w: 38, pct: '38%', c: '--mix-2' },
+    { label: 'Crypto', w: 12.35, pct: '12%', c: '--mix-3' },
+    { label: 'Cash', w: 5.71, pct: '6%', c: '--mix-4' },
+    { label: 'Vehicles', w: 1.48, pct: '1%', c: '--mix-5' }
+  ];
+  var ASSETS = [
+    { icon: 'chart', name: 'Brokerage ••0917', sub: 'Linked account · stocks and funds', value: '$1,385,200', status: 'Verified' },
+    { icon: 'house', name: 'Primary residence', sub: 'Valued from address', value: '$1,240,000', status: 'Verified' },
+    { icon: 'hex', name: 'Crypto wallet', sub: 'Public address · BTC, ETH', value: '$403,080', status: 'Verified' },
+    { icon: 'bank', name: 'Checking and savings', sub: '2 linked accounts', value: '$186,420', status: 'Verified' },
+    { icon: 'car', name: '2022 coupe', sub: 'Valued from VIN', value: '$48,300', status: 'Verified' },
+    { icon: 'watch', name: 'Watch collection', sub: 'Entered by you · not counted', value: '$72,000', status: 'Not ranked', flag: true }
+  ];
+  var DEBTS = [
+    { icon: 'house', name: 'Mortgage', sub: 'Linked loan', value: '−$812,400' },
+    { icon: 'car', name: 'Auto loan', sub: 'Linked loan', value: '−$31,900' },
+    { icon: 'card', name: 'Credit cards', sub: '3 linked cards', value: '−$4,830' }
+  ];
+  var TILES = [
+    { level: 'city', label: 'Austin', rank: '#1,284', top: 'Top 3% of members' },
+    { level: 'state', label: 'Texas', rank: '#18,902', top: 'Top 4% of members' },
+    { level: 'country', label: 'United States', rank: '#241,550', top: 'Top 3% of members' },
+    { level: 'world', label: 'World', rank: '#1.9M', top: 'Top 7% of members' }
+  ];
+
+  /* ---------- Icons ---------- */
+  function svg(d, w) {
+    return '<svg width="' + (w || 20) + '" height="' + (w || 20) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+  }
+  var I = {
+    search: svg('<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>'),
+    plus: svg('<path d="M12 5v14M5 12h14"/>'),
+    close: svg('<path d="M6 6l12 12M18 6L6 18"/>'),
+    back: svg('<path d="M15 5l-7 7 7 7"/>'),
+    chevron: svg('<path d="M9 5l7 7-7 7"/>', 18),
+    check: svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>', 16),
+    lock: svg('<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>', 18),
+    sliders: svg('<path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/>'),
+    camera: svg('<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>', 18),
+    star: svg('<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>', 18),
+    comment: svg('<path d="M4 5h16v11H9l-5 4z"/>', 18),
+    share: svg('<path d="M12 3v12M7 8l5-5 5 5M5 14v6h14v-6"/>', 18),
+    bank: svg('<path d="M3 9l9-5 9 5M5 10v7M10 10v7M14 10v7M19 10v7M3 20h18"/>'),
+    chart: svg('<path d="M4 19h16M6 15l4-4 3 3 5-6"/>'),
+    house: svg('<path d="M3.5 11L12 4l8.5 7M6 9.5V20h12V9.5M10 20v-5h4v5"/>'),
+    car: svg('<path d="M3 16v-3l2.5-5h13L21 13v3H3z"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/>'),
+    hex: svg('<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/>'),
+    card: svg('<path d="M3 6h18v12H3zM3 10h18M7 15h4"/>'),
+    watch: svg('<circle cx="12" cy="12" r="5"/><path d="M9.5 7.5L10 3h4l.5 4.5M9.5 16.5L10 21h4l.5-4.5M12 10v2l1.5 1"/>')
+  };
+  var VERIFIED = '<svg class="verified" role="img" aria-label="Verified" width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  /* ---------- Helpers ---------- */
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function initials(n) {
+    var p = String(n || '').trim().split(/\s+/).filter(Boolean);
+    if (!p.length) return 'W';
+    var a = p[0].charAt(0);
+    var b = p.length > 1 ? p[p.length - 1].charAt(0) : p[0].charAt(1);
+    return (a + b).toUpperCase();
+  }
+  function handleFor(n) {
+    var h = String(n || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '.').replace(/^\.+|\.+$/g, '').slice(0, 24);
+    return h || 'member';
+  }
+  function tone(ini) {
+    var s = String(ini || 'W');
+    return '--av' + (((s.charCodeAt(0) || 0) + (s.charCodeAt(1) || 0)) % 6 + 1);
+  }
+  function avatarHTML(ini, photo, size, ring) {
+    var inner = photo ? '<img src="' + esc(photo) + '" alt="">' : esc(ini);
+    return '<span class="avatar' + (ring ? ' avatar--ring' : '') + '" aria-hidden="true" style="width:' + size + 'px;height:' + size + 'px;font-size:' + Math.round(size * 0.33) + 'px;background:var(' + tone(ini) + ')">' + inner + '</span>';
+  }
+  function fmtCount(n) {
+    if (n >= 1000) return (Math.round(n / 100) / 10).toString().replace(/\.0$/, '') + 'K';
+    return String(n);
+  }
+  function relTime(ms) {
+    var m = Math.floor((Date.now() - ms) / 60000);
+    if (m < 1) return 'Just now';
+    if (m < 60) return m + 'm';
+    var h = Math.floor(m / 60);
+    if (h < 24) return h + 'h';
+    return Math.floor(h / 24) + 'd';
+  }
+  function myWhere() { return { city: 'Austin', state: 'Texas', country: 'United States' }[S.loc]; }
+  function publicAs() {
+    if (!S.board) return 'Hidden from leaderboards';
+    return { exact: 'Public as $2.41M', range: 'Public as $1M–$5M', rank_only: 'Public as rank only' }[S.amount];
+  }
+  var toastTimer = null;
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2400);
+  }
+
+  /* ---------- Shared pieces ---------- */
+  function stepHeader(back, step) {
+    var right = step
+      ? '<div class="grow"><span class="eyebrow">Step ' + step + ' of 3</span><div class="progress">' + [1, 2, 3].map(function (n) { return '<span class="' + (n <= step ? 'on' : '') + '"></span>'; }).join('') + '</div></div>'
+      : '<div class="grow"></div>';
+    return '<div class="step-head"><a class="icon-btn" href="#' + back + '" aria-label="Back">' + I.back + '</a>' + right + '</div>';
+  }
+  function topbar(btn) { return '<header class="topbar"><span class="wordmark">Wealthy</span>' + btn + '</header>'; }
+  function memberRow(r, i) {
+    var mv = r[4];
+    var move = mv > 0 ? '▲ ' + mv : (mv < 0 ? '▼ ' + Math.abs(mv) : '—');
+    var moveSr = mv > 0 ? 'Up ' + mv : (mv < 0 ? 'Down ' + Math.abs(mv) : 'No change');
+    return '<div class="row"><span class="rank">' + (i + 1) + '</span>' + avatarHTML(r[0], null, 40) +
+      '<div class="grow"><div class="name-line"><span class="name">' + esc(r[1]) + '</span>' + VERIFIED + '</div><span class="small ellipsis">' + esc(r[2]) + '</span></div>' +
+      '<div class="end"><span class="amount">' + esc(r[3]) + '</span><span class="move' + (mv > 0 ? ' move--up' : '') + '"><span aria-hidden="true">' + move + '</span><span class="sr">' + moveSr + '</span></span></div></div>';
+  }
+  function itemRow(it) {
+    var end = it.status
+      ? '<div class="end"><span class="amount' + (it.flag ? ' amount--muted' : '') + '">' + it.value + '</span><span class="' + (it.flag ? 'status-flag' : 'small') + '">' + it.status + '</span></div>'
+      : '<span class="amount">' + it.value + '</span>';
+    return '<div class="row"><span class="icon-box" aria-hidden="true">' + I[it.icon] + '</span><div class="grow"><span class="opt-title">' + esc(it.name) + '</span><span class="small">' + esc(it.sub) + '</span></div>' + end + '</div>';
+  }
+  function privacyNote(scope) {
+    var msg = '';
+    if (!S.board) msg = "You're hidden from public leaderboards. Only you see this rank.";
+    else if (scope === 'city' && S.loc !== 'city') msg = 'Only you see your Austin rank, because your location shows as ' + myWhere() + '.';
+    else if (scope === 'state' && S.loc === 'country') msg = 'Only you see your Texas rank, because your location shows as United States.';
+    return msg ? '<p class="card-note">' + I.lock + '<span>' + msg + '</span></p>' : '';
+  }
+
+  /* ---------- Screens ---------- */
+  function welcome() {
+    var ladder = ['City', 'State', 'Country', 'World'].map(function (l, i) {
+      return '<div class="ladder-row" style="padding-left:' + (i * 28) + 'px"><span>' + l + '</span><span class="ladder-hash">#—</span></div>';
+    }).join('');
+    return '<section class="screen screen--welcome">' +
+      '<div class="stack-lg"><div class="wordmark wordmark--xl">Wealthy</div><div class="ladder" aria-hidden="true">' + ladder + '</div></div>' +
+      '<div class="stack-sm"><h1 class="h-xl">Know exactly where you stand.</h1><p class="lede">Link your accounts, verify what you own, and see your rank in your city, your state, your country and the world.</p></div>' +
+      '<div class="stack-sm"><button class="btn btn--primary" data-action="go" data-to="connect">Create your account</button>' +
+      '<button class="btn btn--outline" data-action="login">Log in</button>' +
+      '<p class="fine">Adults 18+ only. This test version uses sample data and connects to no real accounts.</p></div>' +
+      '</section>';
+  }
+
+  function connectView(mode) {
+    var onb = mode === 'onboarding';
+    var rows = CATS.map(function (c) {
+      var on = !!S.linked[c.id];
+      var word = c.id === 'other' ? 'Added' : 'Linked';
+      var right = on ? '<span class="linked">' + I.check + word + '</span>' : '<span class="chev" aria-hidden="true">' + I.chevron + '</span>';
+      return '<button class="opt" data-action="toggle-link" data-id="' + c.id + '" aria-pressed="' + on + '"><span class="icon-box" aria-hidden="true">' + I[c.icon] + '</span><span class="grow"><span class="opt-title">' + c.title + '</span><span class="small">' + (on ? c.linkedSub : c.sub) + '</span></span>' + right + '</button>';
+    }).join('');
+    return '<section class="screen has-dock">' + stepHeader(onb ? 'welcome' : 'wealth', onb ? 2 : 0) +
+      '<div class="stack-sm"><h1 class="h-xl">Add what you own.</h1><p class="lede">Anything we can link or value counts toward your rank. Things you enter yourself show on your profile but stay out of the rankings.</p></div>' +
+      '<div class="opts">' + rows + '</div>' +
+      '<div class="note">' + I.lock + '<p>This test version doesn\'t connect to real accounts. Tap a row to mark it linked.</p></div>' +
+      '</section>' +
+      '<div class="dock"><a class="btn btn--primary" href="#' + (onb ? 'privacy' : 'wealth') + '">' + (onb ? 'Continue' : 'Done') + '</a></div>';
+  }
+
+  function radioGroup(name, legend, opts, cur) {
+    return '<fieldset><legend>' + legend + '</legend>' + opts.map(function (o) {
+      var on = o[0] === cur;
+      return '<label class="radio' + (on ? ' is-on' : '') + '"><input type="radio" name="' + name + '" value="' + o[0] + '"' + (on ? ' checked' : '') + ' data-group="' + name + '"><span class="grow"><span class="opt-title">' + o[1] + '</span><span class="small">' + o[2] + '</span></span></label>';
+    }).join('') + '</fieldset>';
+  }
+  function switchRow(key, title, sub) {
+    var on = !!S[key];
+    return '<div class="switch-row"><span class="grow"><span class="opt-title" id="sw-' + key + '">' + title + '</span><span class="small">' + sub + '</span></span>' +
+      '<button class="switch" role="switch" aria-checked="' + on + '" aria-labelledby="sw-' + key + '" data-action="toggle" data-key="' + key + '"><span class="track"><span class="knob"></span></span></button></div>';
+  }
+  function privacyView(mode) {
+    var onb = mode === 'onboarding';
+    return '<section class="screen has-dock">' + stepHeader(onb ? 'connect' : 'profile', onb ? 3 : 0) +
+      '<div class="stack-sm"><h1 class="h-xl">' + (onb ? 'Choose how you appear.' : 'How you appear') + '</h1><p class="lede">Other members only see what you allow. Account numbers and addresses are never shown to anyone.</p></div>' +
+      '<section class="stack-md" aria-label="Name and photo">' +
+        '<div class="photo-row">' + avatarHTML(initials(S.name), S.photo, 64, true) + '<label class="btn btn--outline btn--sm" for="photo-input">Change photo</label><input class="sr-file" type="file" id="photo-input" accept="image/*" data-photo></div>' +
+        '<div class="field"><label for="name-input">Display name</label><input class="input" id="name-input" type="text" maxlength="50" autocomplete="nickname" value="' + esc(S.name) + '"><span class="small">Any name you like. It doesn\'t have to be your legal name.</span></div>' +
+      '</section>' +
+      radioGroup('amount', 'Show my net worth as', [['exact', 'Exact amount', 'Others see $2.41M'], ['range', 'Range', 'Others see $1M–$5M'], ['rank_only', 'Rank only', 'No dollar figure is shown']], S.amount) +
+      radioGroup('loc', 'Show my location as', [['city', 'City', 'Austin, Texas'], ['state', 'State', 'Texas'], ['country', 'Country', 'United States']], S.loc) +
+      '<section aria-label="Visibility">' + switchRow('board', 'Appear on public leaderboards', 'Off: you still see your own rank, privately.') + switchRow('follow', 'Let people follow you', 'Followers see your milestones in their feed.') + '</section>' +
+      (onb ? '' : '<button class="btn btn--text" data-action="reset">Reset the test app</button>') +
+      '</section>' +
+      '<div class="dock"><button class="btn btn--primary" data-action="' + (onb ? 'finish' : 'save-settings') + '">' + (onb ? 'Save and see my rank' : 'Save changes') + '</button></div>';
+  }
+
+  function rankings() {
+    var d = SCOPES[UI.scope];
+    var seg = Object.keys(SCOPES).map(function (k) {
+      return '<button data-action="scope" data-scope="' + k + '" aria-pressed="' + (k === UI.scope) + '">' + SCOPES[k].label + '</button>';
+    }).join('');
+    return '<section class="screen has-tabs">' +
+      topbar('<button class="icon-btn" data-action="soon" data-msg="Member search isn\'t in this test version yet." aria-label="Search members">' + I.search + '</button>') +
+      '<div class="stack-xs"><span class="eyebrow">' + d.eyebrow + '</span><h1 class="title">' + d.place + '</h1></div>' +
+      '<div class="seg" role="group" aria-label="Ranking scope">' + seg + '</div>' +
+      '<section class="card" aria-label="Your position">' +
+        '<div class="card-top"><div class="stack-xs"><span class="eyebrow">Your rank</span><span class="rank-num">' + d.rank + '</span><span class="small">' + d.of + '</span></div><span class="pill pill--accent"><span aria-hidden="true">' + d.move + '</span><span class="sr">' + d.moveSr + '</span></span></div>' +
+        '<div class="stat-grid"><div class="stack-2"><span class="stat-big">Top ' + d.topM + '</span><span class="small">of Wealthy members</span></div><div class="stack-2"><span class="stat-big">Top ' + d.topR + '</span><span class="small">' + d.resLabel + '</span></div></div>' +
+        privacyNote(UI.scope) +
+      '</section>' +
+      '<section aria-label="Top members"><div class="list-head"><h2 class="h2">Top members</h2><span class="small">Verified net worth only</span></div>' + d.rows.map(memberRow).join('') + '</section>' +
+      '<p class="fine">Sample data for testing.</p>' +
+      '</section>';
+  }
+
+  function visiblePosts() {
+    var mine = S.myPosts.map(function (p) { return Object.assign({ mine: true }, p); });
+    var all = mine.concat(POSTS);
+    return all.filter(function (p) {
+      if (UI.feed === 'austin') return p.mine ? S.loc === 'city' : p.place === 'austin';
+      if (UI.feed === 'texas') return p.mine ? S.loc !== 'country' : (p.place === 'texas' || p.place === 'austin');
+      if (UI.feed === 'milestones') return !!p.milestone;
+      return true;
+    });
+  }
+  function postHTML(p) {
+    var mine = !!p.mine;
+    var ini = mine ? initials(S.name) : p.ini;
+    var name = mine ? S.name : p.name;
+    var where = mine ? myWhere() : p.where;
+    var time = mine ? relTime(p.at) : p.time;
+    var cheered = S.cheered.indexOf(p.id) !== -1;
+    var cheers = (p.cheers || 0) + (cheered ? 1 : 0);
+    var comments = p.comments || 0;
+    return '<article class="post">' +
+      '<div class="post-head">' + avatarHTML(ini, mine ? S.photo : null, 40) + '<div class="grow"><div class="name-line"><span class="name">' + esc(name) + '</span>' + VERIFIED + '</div><span class="small">' + esc(where) + ' · ' + esc(time) + '</span></div>' + (p.rank ? '<span class="post-rank">' + p.rank + '</span>' : '') + '</div>' +
+      (p.title ? '<div class="stack-xs"><span class="post-label">' + esc(p.label) + '</span><span class="post-title">' + esc(p.title) + '</span></div>' : '') +
+      (p.body ? '<p class="post-body">' + esc(p.body) + '</p>' : '') +
+      '<div class="actions">' +
+        '<button class="act" data-action="cheer" data-id="' + esc(p.id) + '" aria-pressed="' + cheered + '" aria-label="Cheer, ' + cheers + ' cheers">' + I.star + '<span>' + fmtCount(cheers) + '</span></button>' +
+        '<button class="act" data-action="soon" data-msg="Comments aren\'t in this test version yet." aria-label="' + comments + ' comments">' + I.comment + '<span>' + fmtCount(comments) + '</span></button>' +
+        '<button class="act" data-action="share" aria-label="Share">' + I.share + '</button>' +
+        (mine ? '<button class="act act--end" data-action="delete-post" data-id="' + esc(p.id) + '">Delete</button>' : '') +
+      '</div></article>';
+  }
+  function updateCard() {
+    var u = UPDATES[S.loc];
+    return '<section class="card card--tight" aria-label="Your update"><span class="eyebrow eyebrow--accent">This month</span>' +
+      '<p class="update-text">You climbed ' + u.places + ' places in ' + u.where + '. You\'re now ' + u.rank + '.</p>' +
+      '<div class="row-btns">' + (S.board ? '<button class="btn btn--primary btn--sm" data-action="share-rank">Share to feed</button>' : '') + '<a class="btn btn--outline btn--sm" href="#rankings">See rankings</a></div></section>';
+  }
+  function feed() {
+    var filters = [['following', 'Following'], ['austin', 'Austin'], ['texas', 'Texas'], ['milestones', 'Milestones']];
+    var titles = { following: 'Following', austin: 'Austin', texas: 'Texas', milestones: 'Milestones' };
+    var posts = visiblePosts();
+    var chips = filters.map(function (f) { return '<button class="chip-btn" data-action="filter" data-filter="' + f[0] + '" aria-pressed="' + (f[0] === UI.feed) + '">' + f[1] + '</button>'; }).join('');
+    var list = posts.length ? posts.map(postHTML).join('') :
+      '<div class="empty"><p class="lede">No posts here yet.</p><button class="btn btn--outline btn--sm" data-action="compose">Write a post</button></div>';
+    return '<section class="screen has-tabs">' +
+      topbar('<button class="icon-btn" data-action="compose" aria-label="Write a post">' + I.plus + '</button>') +
+      '<div class="stack-xs"><span class="eyebrow">Feed</span><h1 class="title">' + titles[UI.feed] + '</h1></div>' +
+      '<div class="chips-row" role="group" aria-label="Filter feed">' + chips + '</div>' +
+      (UI.feed === 'following' ? updateCard() : '') + list +
+      '</section>';
+  }
+
+  function wealth() {
+    var bar = MIX.map(function (m) { return '<span style="flex:' + m.w + ' 1 0;background:var(' + m.c + ')"></span>'; }).join('');
+    var legend = MIX.map(function (m) { return '<div class="legend-item"><span class="swatch" style="background:var(' + m.c + ')"></span><span>' + m.label + '</span><span class="small push">' + m.pct + '</span></div>'; }).join('');
+    return '<section class="screen has-tabs">' +
+      topbar('<a class="icon-btn icon-btn--solid" href="#add" aria-label="Add an asset or debt">' + I.plus + '</a>') +
+      '<div class="stack-xs"><span class="eyebrow">Your wealth</span><h1 class="big-num">$2,413,870</h1><span class="small">Verified net worth · updated today, 6:02 AM</span></div>' +
+      '<div class="totals"><div class="stack-2"><span class="eyebrow">Assets</span><span class="total">$3,263,000</span></div><div class="stack-2"><span class="eyebrow">Liabilities</span><span class="total">−$849,130</span></div></div>' +
+      '<section class="stack-md" aria-label="Asset mix"><div class="mix-bar" aria-hidden="true">' + bar + '</div><div class="legend">' + legend + '</div></section>' +
+      '<section aria-label="Assets"><div class="list-head"><h2 class="h2">Assets</h2><span class="small">Status</span></div>' + ASSETS.map(itemRow).join('') + '</section>' +
+      '<section aria-label="Liabilities"><div class="list-head"><h2 class="h2">Liabilities</h2><span class="small">Subtracted from net worth</span></div>' + DEBTS.map(itemRow).join('') + '</section>' +
+      '<p class="fine">Sample data for testing.</p>' +
+      '</section>';
+  }
+
+  function profile() {
+    var ini = initials(S.name);
+    var tiles = TILES.map(function (t) {
+      var hidden = !S.board || (t.level === 'city' && S.loc !== 'city') || (t.level === 'state' && S.loc === 'country');
+      return '<div class="tile"><span class="eyebrow">' + t.label + '</span><span class="tile-rank">' + t.rank + '</span><span class="small">' + t.top + '</span>' + (hidden ? '<span class="only-you">Only you</span>' : '') + '</div>';
+    }).join('');
+    var milestones = ['Crossed $1M', 'Top 5% in Austin', 'Top 5% in Texas'].map(function (c) { return '<span class="chip">' + c + '</span>'; }).join('');
+    return '<section class="screen has-tabs">' +
+      topbar('<a class="icon-btn" href="#settings" aria-label="Privacy and display settings">' + I.sliders + '</a>') +
+      '<div class="profile-head">' +
+        '<div class="avatar-wrap">' + avatarHTML(ini, S.photo, 104, true) + '<label class="camera" for="photo-input-profile"><span class="sr">Change profile photo</span>' + I.camera + '</label><input class="sr-file" type="file" id="photo-input-profile" accept="image/*" data-photo></div>' +
+        '<div class="stack-xs center"><h1 class="profile-name">' + esc(S.name) + '</h1><span class="small">@' + esc(handleFor(S.name)) + ' · ' + myWhere() + ' · Joined Mar 2026</span></div>' +
+        '<div class="counts"><span><strong>1,204</strong> followers</span><span><strong>312</strong> following</span></div>' +
+        '<div class="row-btns full" style="width:100%"><a class="btn btn--outline btn--sm" href="#settings">Edit profile</a><button class="btn btn--outline btn--sm" data-action="share-profile">Share profile</button></div>' +
+      '</div>' +
+      '<section class="card card--tight" aria-label="Net worth"><div class="card-top"><span class="eyebrow">Net worth</span><span class="pill">' + publicAs() + '</span></div><span class="nw">$2.41M</span><span class="small">Only you see the exact figure. <a class="inline-link" href="#wealth">See breakdown</a></span></section>' +
+      '<section class="stack-md" aria-label="Where you stand"><h2 class="h2">Where you stand</h2><div class="tiles">' + tiles + '</div></section>' +
+      '<section class="stack-md" aria-label="Milestones"><h2 class="h2">Milestones</h2><div class="chips">' + milestones + '</div></section>' +
+      '</section>';
+  }
+
+  /* ---------- Rendering and routing ---------- */
+  var VIEWS = {
+    welcome: welcome,
+    connect: function () { return connectView('onboarding'); },
+    add: function () { return connectView('add'); },
+    privacy: function () { return privacyView('onboarding'); },
+    settings: function () { return privacyView('settings'); },
+    rankings: rankings, feed: feed, wealth: wealth, profile: profile
+  };
+  var TITLES = { welcome: 'Wealthy', connect: 'Add what you own · Wealthy', add: 'Add what you own · Wealthy', privacy: 'How you appear · Wealthy', settings: 'How you appear · Wealthy', rankings: 'Rankings · Wealthy', feed: 'Feed · Wealthy', wealth: 'Your wealth · Wealthy', profile: 'Profile · Wealthy' };
+  var TABS = ['rankings', 'feed', 'wealth', 'profile'];
+  var root = document.getElementById('app');
+  var tabbar = document.getElementById('tabbar');
+  var sheetRoot = document.getElementById('sheet-root');
+
+  function current() {
+    var h = decodeURIComponent(location.hash.slice(1));
+    if (Object.prototype.hasOwnProperty.call(VIEWS, h)) return h;
+    return S.onboarded ? 'rankings' : 'welcome';
+  }
+  function go(screen) {
+    if (location.hash.slice(1) === screen) render();
+    else location.hash = screen;
+  }
+  function render() {
+    var scr = current();
+    root.innerHTML = VIEWS[scr]();
+    var isTab = TABS.indexOf(scr) !== -1;
+    tabbar.hidden = !isTab;
+    Array.prototype.forEach.call(tabbar.querySelectorAll('a'), function (a) {
+      if (a.getAttribute('data-tab') === scr) a.setAttribute('aria-current', 'page');
+      else a.removeAttribute('aria-current');
+    });
+    document.title = TITLES[scr];
+    renderSheet();
+    if (UI.last !== scr) { window.scrollTo(0, 0); UI.last = scr; }
+  }
+  function renderSheet() {
+    if (!UI.sheet) { sheetRoot.innerHTML = ''; return; }
+    sheetRoot.innerHTML = '<div class="sheet-backdrop" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">' +
+      '<div class="sheet-head"><h2 class="h2" id="sheet-title">Write a post</h2><button class="icon-btn" data-action="close-sheet" aria-label="Close">' + I.close + '</button></div>' +
+      '<label class="sr" for="compose-text">Post text</label><textarea class="input textarea" id="compose-text" maxlength="500" placeholder="Share a milestone or a thought"></textarea>' +
+      '<div class="sheet-foot"><span class="small" id="compose-count">0 / 500</span><button class="btn btn--primary btn--sm" data-action="post">Post</button></div>' +
+      '</div></div>';
+    setTimeout(function () { var t = document.getElementById('compose-text'); if (t) t.focus(); }, 60);
+  }
+
+  /* ---------- Photos ---------- */
+  function readPhoto(file) {
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onerror = reject;
+      fr.onload = function () {
+        var img = new Image();
+        img.onerror = reject;
+        img.onload = function () {
+          var size = 320;
+          var c = document.createElement('canvas');
+          c.width = size; c.height = size;
+          var m = Math.min(img.naturalWidth, img.naturalHeight);
+          c.getContext('2d').drawImage(img, (img.naturalWidth - m) / 2, (img.naturalHeight - m) / 2, m, m, 0, 0, size, size);
+          resolve(c.toDataURL('image/jpeg', 0.86));
+        };
+        img.src = fr.result;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  /* ---------- Sharing ---------- */
+  function shareLink(text) {
+    var url = location.href.split('#')[0];
+    function copy() {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function () { toast('Link copied'); }, function () { toast('Copy the address bar to share this page.'); });
+      } else { toast('Copy the address bar to share this page.'); }
+    }
+    if (navigator.share) {
+      navigator.share({ title: 'Wealthy', text: text, url: url }).catch(function (e) { if (!e || e.name !== 'AbortError') copy(); });
+    } else { copy(); }
+  }
+
+  /* ---------- Events ---------- */
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    var a = el.getAttribute('data-action');
+    if (el.classList.contains('sheet-backdrop') && e.target !== el) return;
+
+    if (a === 'go') { go(el.getAttribute('data-to')); }
+    else if (a === 'login') { S.onboarded = true; save(); go('rankings'); }
+    else if (a === 'finish') {
+      if (!S.name.trim()) S.name = 'New member';
+      S.onboarded = true; save(); go('rankings'); toast('Profile saved');
+    }
+    else if (a === 'save-settings') {
+      if (!S.name.trim()) S.name = 'New member';
+      save(); go('profile'); toast('Changes saved');
+    }
+    else if (a === 'scope') { UI.scope = el.getAttribute('data-scope'); render(); }
+    else if (a === 'filter') { UI.feed = el.getAttribute('data-filter'); render(); }
+    else if (a === 'toggle-link') {
+      var id = el.getAttribute('data-id');
+      S.linked[id] = !S.linked[id]; save(); render();
+      var cat = CATS.filter(function (c) { return c.id === id; })[0];
+      toast(cat.title + (S.linked[id] ? (id === 'other' ? ' added' : ' linked') : ' removed'));
+    }
+    else if (a === 'toggle') {
+      var key = el.getAttribute('data-key');
+      S[key] = !S[key]; save(); render();
+    }
+    else if (a === 'cheer') {
+      var pid = el.getAttribute('data-id');
+      var i = S.cheered.indexOf(pid);
+      if (i === -1) S.cheered.push(pid); else S.cheered.splice(i, 1);
+      save(); render();
+    }
+    else if (a === 'compose') { UI.sheet = true; renderSheet(); }
+    else if (a === 'close-sheet') { UI.sheet = false; renderSheet(); }
+    else if (a === 'post') {
+      var t = document.getElementById('compose-text');
+      var body = t ? t.value.trim() : '';
+      if (!body) { toast('Write something first'); return; }
+      S.myPosts.unshift({ id: 'm' + Date.now(), at: Date.now(), body: body, cheers: 0, comments: 0 });
+      save(); UI.sheet = false; UI.feed = 'following'; go('feed'); render(); toast('Posted');
+    }
+    else if (a === 'share-rank') {
+      var u = UPDATES[S.loc];
+      S.myPosts.unshift({ id: 'm' + Date.now(), at: Date.now(), label: 'Milestone', title: 'Climbed ' + u.places + ' places in ' + u.where + ' this month', body: null, cheers: 0, comments: 0, milestone: true });
+      save(); render(); toast('Shared to your feed');
+    }
+    else if (a === 'delete-post') {
+      var did = el.getAttribute('data-id');
+      S.myPosts = S.myPosts.filter(function (p) { return p.id !== did; });
+      save(); render(); toast('Post deleted');
+    }
+    else if (a === 'share') { shareLink('A milestone on Wealthy'); }
+    else if (a === 'share-profile') { shareLink(S.name + ' on Wealthy'); }
+    else if (a === 'soon') { toast(el.getAttribute('data-msg')); }
+    else if (a === 'reset') {
+      if (window.confirm('Reset the test app and start over? Your test name, photo and posts on this phone will be cleared.')) {
+        try { localStorage.removeItem(KEY); } catch (err) {}
+        S = fresh(); UI.scope = 'city'; UI.feed = 'following'; UI.sheet = false;
+        go('welcome');
+      }
+    }
+  });
+
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t.matches('[data-group]')) {
+      S[t.getAttribute('data-group')] = t.value; save(); render();
+    }
+    else if (t.matches('[data-photo]') && t.files && t.files[0]) {
+      readPhoto(t.files[0]).then(function (url) {
+        S.photo = url; save(); render(); toast('Photo updated');
+      }, function () { toast("That photo couldn't be opened. Try a JPEG or PNG."); });
+    }
+    else if (t.id === 'name-input') {
+      if (!S.name.trim()) S.name = 'New member';
+      save(); render();
+    }
+  });
+
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t.id === 'name-input') { S.name = t.value.slice(0, 50); save(); }
+    else if (t.id === 'compose-text') {
+      var c = document.getElementById('compose-count');
+      if (c) c.textContent = t.value.length + ' / 500';
+    }
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && UI.sheet) { UI.sheet = false; renderSheet(); }
+  });
+
+  window.addEventListener('hashchange', render);
+  render();
+})();
+</script>
+</body>
+</html>
