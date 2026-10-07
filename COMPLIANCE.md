@@ -10,14 +10,14 @@ This is an engineering record, not legal advice. Have a lawyer who works with fi
 | --- | --- | --- | --- |
 | 1 | Privacy Policy | Done; placeholders to fill | `privacy.html` |
 | 2 | Terms of Service | Done; placeholders to fill | `terms.html` |
-| 3 | Refund Policy | Done; refund window to confirm | `refunds.html` |
+| 3 | Refund Policy | Done (free app: no charges, so no refunds) | `refunds.html` |
 | 4 | Cookie Policy | Done | `cookies.html` |
 | 5 | Cookie consent banner | Done | App, first visit |
 | 6 | Form consents | Done | Sign-up step 1 |
 | 7 | No unnecessary data | Done | App and database step 10 |
 | 8 | Third-party SDK audit | Done (none in use) | Section 8 below |
 | 9 | Dark patterns removed | Done | Section 9 below |
-| 10 | No hidden fees | Done | Terms §10, Refund Policy |
+| 10 | No hidden fees | Done (Wealthy is free) | Terms §4, Refund Policy |
 | 11 | No fake reviews | Done | Section 11 below |
 | 12 | No unsupported claims | Done | Section 12 below |
 | 13 | Alt text | Done | Section 13 below |
@@ -28,10 +28,11 @@ This is an engineering record, not legal advice. Have a lawyer who works with fi
 | 18 | Unsubscribe links | Done in app and database; email sending not built yet | Section 18 below |
 | 19 | Font and image licenses | Done | `LICENSES.md` |
 | 20 | Data deletion requests | Done in app and database; server job not built yet | Section 20 below |
+| 21 | Liability protection | Done, within legal limits | Section 21 below |
 
 ## 1–4. Policies
 
-Four policy pages share one source of business details, `business.js`. Fill in each `[BRACKETED]` value there once and every page updates. The pages also contain bracketed vendor names in the Privacy Policy's partner table, to fill in as vendors are chosen, and a refund window, `[14]` days, in the Refund Policy.
+Four policy pages share one source of business details, `business.js`. Fill in each `[BRACKETED]` value there once and every page updates. The Privacy Policy's partner table also has bracketed vendor names to fill in as vendors are chosen. Terms and Privacy are version 1.1; the app records which version each member accepted.
 
 Every promise in the policies is backed by the product:
 
@@ -114,7 +115,7 @@ Planned for the full service:
 
 ## 10. Fees
 
-There are no prices anywhere in the product. Terms §10 and the Refund Policy commit to showing price, billing period, renewal terms and taxes before purchase, reminding before a free trial converts, 30 days' notice of price changes, and cancelling as easily as signing up.
+Wealthy is free: no fees, subscriptions, in-app purchases or payment details, anywhere. Terms §4 and the Refund Policy say so plainly, warn members that anyone asking them to pay "Wealthy" is a scammer, and promise that if anything paid is ever offered, the price and terms will be shown and agreed to first, with nothing charged automatically.
 
 ## 11. Fake reviews and testimonials
 
@@ -208,11 +209,36 @@ See `LICENSES.md`. Montserrat is bundled under the SIL Open Font License with it
 
 Still to build: the server job that processes deletion requests within 30 days.
 
+## 21. Liability protection
+
+The Terms (version 1.1) now give Wealthy the strongest protection that's generally enforceable for a free consumer app:
+
+| Protection | Where |
+| --- | --- |
+| Service provided "as is", with all warranties disclaimed | Terms §14 |
+| Not liable for data breaches or unauthorized access, beyond what the law requires | Terms §13, Privacy §9 |
+| Not liable for other members' conduct or content, online or offline, with a release of claims (including California Civil Code §1542) | Terms §8 |
+| Members choose what to share and accept the risks of sharing wealth information | Terms §7, Privacy §4 |
+| Not liable for members' financial decisions or their outcomes; estimates aren't advice | Terms §5 |
+| Total liability capped at $50, with no indirect or punitive damages | Terms §15 |
+| Members cover Wealthy's costs for claims caused by their content or conduct | Terms §16 |
+| Individual arbitration, class action and jury waiver, with a 30-day opt-out; shown at sign-up | Terms §18, sign-up checkbox |
+| One-year time limit to bring claims | Terms §19 |
+
+**What no policy can do.** These clauses apply "to the fullest extent the law allows." They can't remove duties the law imposes, including:
+- notifying members and regulators after a breach;
+- keeping "reasonable security," which, if breached, can support statutory damages under California's privacy law;
+- consumer-protection enforcement by the FTC and state attorneys general;
+- in many states, liability for gross negligence or willful misconduct.
+
+The real protection against those risks is strong security, honest policies, the LLC structure, and **cyber liability insurance**.
+
 ## Before real accounts open
 
-1. Lawyer review of all four policies, the Terms' dispute and liability sections, and whether GLBA rules apply.
-2. Fill in `business.js`, the vendor names in Privacy §5, and the refund window.
-3. Build the deletion job, the email sender with unsubscribe page, and choose vendors (with data processing agreements).
-4. Manual screen reader testing on iPhone and Android.
-5. App Store privacy labels and Google Play Data safety form, matching the Privacy Policy.
-6. Trademark search for "Wealthy".
+1. Lawyer review of all four policies, especially the liability, release and arbitration sections (Terms §§13–19), and whether GLBA rules apply.
+2. Fill in `business.js` and the vendor names in Privacy §5.
+3. Get quotes for cyber liability insurance.
+4. Build the deletion job, the email sender with unsubscribe page, and choose vendors (with data processing agreements).
+5. Manual screen reader testing on iPhone and Android.
+6. App Store privacy labels and Google Play Data safety form, matching the Privacy Policy.
+7. Trademark search for "Wealthy".

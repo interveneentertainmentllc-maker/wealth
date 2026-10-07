@@ -13,7 +13,7 @@ It uses sample data. No real accounts are connected, and nothing leaves the phon
 | `privacy.html`, `terms.html`, `refunds.html`, `cookies.html` | Privacy Policy, Terms of Service, Refund Policy, Cookie Policy |
 | `legal.css` | Styling for the policy pages |
 | `fonts/` | The Montserrat font and its license |
-| `icons/` | Money bag home-screen icons |
+| `icons/` | Money bag icons for the home screen (iPhone and Android) and browser tabs |
 | `manifest.webmanifest` | Lets phones add the app to the home screen |
 | `COMPLIANCE.md` | Audit record: privacy, consent, accessibility, licenses, and what's left before launch |
 | `LICENSES.md` | Licenses for fonts, images and icons |
@@ -34,9 +34,10 @@ Open `business.js` and replace every `[BRACKETED]` value: company legal name, st
 ## Test it on your phone
 
 1. Open the link in Safari (iPhone) or Chrome (Android).
-2. Add it to your home screen so it opens full screen like an app:
-   - **iPhone:** tap the Share button, then **Add to Home Screen**.
-   - **Android:** tap the ⋮ menu, then **Add to Home screen** or **Install app**.
+2. Add it to your home screen so it opens full screen like an app, with the money bag icon:
+   - **iPhone:** in Safari, tap the Share button, then **Add to Home Screen**.
+   - **Android:** in Chrome, tap the ⋮ menu, then **Add to Home screen** or **Install app**.
+   - **Already added an older version?** Phones keep the icon from when you first added it. Press and hold the old icon, remove it, then add the page to your home screen again.
 3. The money load-in plays once per visit. Open the Feed and wait a few seconds: a **Show new posts** button appears and new milestones pop in when you tap it. Tap **+** to post your own milestone.
 4. To start over: Profile → settings button (top right) → **Delete my account and data**.
 

@@ -11,9 +11,10 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Wealthy">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest?v=2">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/wealthy-favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/wealthy-icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/wealthy-apple-touch-180.png">
 <style>
 /* Montserrat, SIL Open Font License 1.1 (see fonts/OFL.txt). Bundled so no font request goes to a third party. */
 @font-face {
@@ -398,8 +399,8 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     privacyEmail: '[PRIVACY EMAIL]'
   }, window.WEALTHY_BUSINESS || {});
   var APP_VERSION = 'Test version 0.2';
-  var TERMS_VERSION = '1.0';
-  var PRIVACY_VERSION = '1.0';
+  var TERMS_VERSION = '1.1';
+  var PRIVACY_VERSION = '1.1';
 
   /* ---------- Saved state (this device only) ---------- */
   var KEY = 'wealthy-test-v2';
@@ -773,7 +774,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
         '<span class="small" id="dob-hint">Only used to confirm you\'re 18 or older.</span>' +
         (f.dobError ? '<p class="error" id="dob-error">' + f.dobError + '</p>' : '') + '</div>' +
       '<fieldset><legend class="sr">Agreements</legend>' +
-        '<label class="check"><input type="checkbox" id="agree-terms"' + (f.terms ? ' checked' : '') + (f.termsError ? ' aria-invalid="true" aria-describedby="terms-error"' : '') + '><span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service<span class="sr"> (opens in a new tab)</span></a> and have read the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy<span class="sr"> (opens in a new tab)</span></a>. Required.</span></label>' +
+        '<label class="check"><input type="checkbox" id="agree-terms"' + (f.terms ? ' checked' : '') + (f.termsError ? ' aria-invalid="true" aria-describedby="terms-error"' : '') + '><span>I agree to the <a href="terms.html" target="_blank" rel="noopener">Terms of Service<span class="sr"> (opens in a new tab)</span></a>, including resolving disputes by individual arbitration, and have read the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy<span class="sr"> (opens in a new tab)</span></a>. Required.</span></label>' +
         (f.termsError ? '<p class="error" id="terms-error">' + f.termsError + '</p>' : '') +
         '<label class="check"><input type="checkbox" id="agree-marketing"' + (f.marketing ? ' checked' : '') + '><span>Send me product news by email. Optional; every email has an unsubscribe link.</span></label>' +
       '</fieldset>' +
@@ -857,7 +858,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       '<section aria-labelledby="h-about-legal"><h2 class="h2" id="h-about-legal">Policies</h2><div class="link-list">' +
         LEGAL.map(function (l) { return '<a href="' + l.href + '">' + l.label + '<span class="chev" aria-hidden="true">' + I.chevron + '</span></a>'; }).join('') +
       '</div></section>' +
-      '<p class="small">Wealthy shows estimates for information only. It isn\'t financial, investment, tax or legal advice.</p>' +
+      '<p class="small">Wealthy is free: no fees, subscriptions or in-app purchases. It shows estimates for information only, and isn\'t financial, investment, tax or legal advice.</p>' +
       '</section>';
   }
 
