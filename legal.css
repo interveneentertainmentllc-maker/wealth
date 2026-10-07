@@ -1,10 +1,10 @@
-/* Montserrat, SIL Open Font License 1.1 (see fonts/OFL.txt). Served from this site, not from a third party. */
+/* Montserrat, SIL Open Font License 1.1 (see OFL.txt). Served from this site, not from a third party. */
 @font-face {
   font-family: 'Montserrat';
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
-  src: url('fonts/Montserrat-latin.woff2') format('woff2');
+  src: url('Montserrat-latin.woff2') format('woff2');
 }
 :root {
   --font: 'Gotham', 'Montserrat', 'Helvetica Neue', Helvetica, Arial, sans-serif;
