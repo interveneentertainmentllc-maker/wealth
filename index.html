@@ -273,6 +273,15 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
 .act[aria-pressed="true"] { color: var(--accent); }
 .act[aria-pressed="true"] svg path { fill: currentColor; }
 .act--repost[aria-pressed="true"] svg path { fill: none; }
+.act--flex .flex-ic--on .flex-fill { fill: currentColor; }
+.act--flex .flex-ic .flex-sign { fill: none; }
+.act--flex .flex-ic--on .flex-sign { stroke: var(--ground); stroke-width: 4.5; stroke-linecap: round; stroke-linejoin: round; }
+.icon-btn--plain { width: 44px; height: 44px; margin-right: -10px; border-color: transparent; color: var(--muted); }
+.icon-btn--plain svg circle { fill: currentColor; stroke: none; }
+.btn--center { align-self: center; }
+.sheet-options { display: flex; flex-direction: column; border-top: 1px solid var(--line-soft); }
+.sheet-option { min-height: 52px; padding: 0 4px; border: 0; border-bottom: 1px solid var(--line-soft); background: transparent; color: var(--ink); font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; }
+.sheet-option--danger { color: var(--error); }
 .empty { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 24px 20px; }
 .pop { animation: pop-in 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.15) both; }
 @keyframes pop-in { from { opacity: 0; transform: translateY(-14px) scale(0.97); background: var(--surface-2); } to { opacity: 1; transform: none; background: transparent; } }
@@ -365,6 +374,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
 }
 </style>
 <!-- Business details live in business.js, shared with the policy pages. -->
+<script src="supabase.js"></script>
 <script src="business.js"></script>
 <noscript><style>.splash { display: none; }</style></noscript>
 </head>
@@ -398,9 +408,28 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     supportEmail: '[SUPPORT EMAIL]',
     privacyEmail: '[PRIVACY EMAIL]'
   }, window.WEALTHY_BUSINESS || {});
-  var APP_VERSION = 'Test version 0.2';
+  var APP_VERSION = 'Test version 0.3';
   var TERMS_VERSION = '1.1';
   var PRIVACY_VERSION = '1.1';
+
+  /* ---------- Live test accounts (Supabase) ---------- */
+  // The publishable key is meant to be public: row-level security in the database decides what each person can see and change.
+  var LIVE_CFG = { url: 'https://ymkwrjavweavmwdsgzku.supabase.co', key: 'sb_publishable_0uRKIRTmGfCQnTh0-mvhrA_ii9s8DQc', signup: 'live-test-signup' };
+  var INVITE_KEY = 'wealthy-invite';
+  var sb = null;
+  try {
+    if (window.supabase && window.supabase.createClient) {
+      sb = window.supabase.createClient(LIVE_CFG.url, LIVE_CFG.key, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'wealthy-live-session' }
+      });
+    }
+  } catch (e) { sb = null; }
+  var INVITE = (function () {
+    var code = null;
+    try { code = new URLSearchParams(location.search).get('invite'); } catch (e) {}
+    if (code) { try { localStorage.setItem(INVITE_KEY, code); } catch (e) {} return code; }
+    try { return localStorage.getItem(INVITE_KEY); } catch (e) { return null; }
+  })();
 
   /* ---------- Saved state (this device only) ---------- */
   var KEY = 'wealthy-test-v2';
@@ -410,7 +439,8 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     name: '', photo: null,
     amount: 'range', loc: 'state', board: false, follow: true, marketing: false,
     linked: { bank: false, invest: false, home: false, car: false, crypto: false, debts: false, other: false },
-    cheered: [], reposted: [], following: [], myPosts: []
+    cheered: [], reposted: [], following: [], myPosts: [],
+    mode: 'demo', me: null, handle: null, joinedAt: null, followingIds: [], hiddenSample: [], hiddenPosts: [], blockedNames: {}
   };
   function fresh() { return JSON.parse(JSON.stringify(DEFAULTS)); }
   function load() {
@@ -421,7 +451,8 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       s.linked = Object.assign(fresh().linked, s.linked || {});
       if (!Array.isArray(s.cheered)) s.cheered = [];
       if (!Array.isArray(s.myPosts)) s.myPosts = [];
-      ['reposted', 'following'].forEach(function (k) { if (!Array.isArray(s[k])) s[k] = []; });
+      ['reposted', 'following', 'followingIds', 'hiddenSample', 'hiddenPosts'].forEach(function (k) { if (!Array.isArray(s[k])) s[k] = []; });
+      if (!s.blockedNames || typeof s.blockedNames !== 'object') s.blockedNames = {};
       s.myPosts = s.myPosts.filter(function (p) { return !p.milestone || typeof p.milestone === 'string'; });
       return s;
     } catch (e) { return fresh(); }
@@ -449,7 +480,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   }
   var S = load();
   var C = loadConsent();
-  var UI = { scope: 'city', feedTab: 'foryou', feedLoading: false, feedTimer: null, queue: [], pending: [], live: [], justAdded: [], sheet: null, opener: null, last: null, showConsent: false, form: { error: '', dobError: '' } };
+  var UI = { signup: 'demo', busy: false, loginError: '', remote: [], remoteIds: {}, myCounts: null, target: null, scope: 'city', feedTab: 'foryou', feedLoading: false, feedTimer: null, queue: [], pending: [], live: [], justAdded: [], sheet: null, opener: null, last: null, showConsent: false, form: { error: '', dobError: '' } };
 
   /* ---------- Sample data (clearly labeled in the interface) ---------- */
   var SCOPES = {
@@ -620,6 +651,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     building: svg('<path d="M6 21V4h12v17M3 21h18M9 8h2M13 8h2M9 12h2M13 12h2M10 21v-4h4v4"/>'),
     piggy: svg('<path d="M5 11c0-3.3 3.1-6 7-6s7 2.7 7 6c0 2-1.1 3.7-2.8 4.8V19h-2.5l-.5-2h-3.4l-.5 2H7.8v-3.2C6.1 14.7 5 13 5 11z"/><path d="M19 10h2M10 7.5h4"/>'),
     podium: svg('<path d="M3 20h18M4 20v-6h5v6M9 20V9h6v11M15 20v-8h5v8M12 3l1 2 2 .3-1.5 1.4.4 2.1-1.9-1-1.9 1 .4-2.1L9 5.3 11 5z"/>'),
+    dots: svg('<circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>'),
     repost: svg('<path d="M7 7h11l-3-3M17 17H6l3 3M18 7v5M6 17v-5"/>', 18),
     bagIcon: svg('<path d="M9 3h6l-1.5 3.5h-3zM10 6.5C6 8.5 4 12 4 15c0 3.5 3 5 8 5s8-1.5 8-5c0-3-2-6.5-6-8.5"/><path d="M14 11.2c-.5-.6-1.2-.9-2-.9-1.2 0-2 .6-2 1.5 0 2 4.1 1.1 4.1 3.2 0 .9-.9 1.5-2.1 1.5-.9 0-1.7-.4-2.2-1M12 9.4v.9M12 16.5v.9"/>'),
     watch: svg('<circle cx="12" cy="12" r="5"/><path d="M9.5 7.5L10 3h4l.5 4.5M9.5 16.5L10 21h4l.5-4.5M12 10v2l1.5 1"/>')
@@ -628,6 +660,8 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   function bagSVG(size, label) {
     return '<svg class="bag" width="' + size + '" height="' + size + '" viewBox="0 0 64 64" ' + (label ? 'role="img" aria-label="' + label + '"' : 'aria-hidden="true"') + ' focusable="false">' + BAG_INNER + '</svg>';
   }
+  var FLEX_OFF = '<svg class="flex-ic" width="18" height="18" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="4.5" stroke-linejoin="round"><path d="M24 7c3 2.6 5.6 3.4 8 3.4S37 9.6 40 7l-3.2 12.4H27.2z"/><rect x="25" y="19" width="14" height="5.5" rx="2.75"/><path d="M27 24.5C15.5 30 9.5 40.5 10.2 49c.7 7.6 8.6 11 21.8 11s21.1-3.4 21.8-11c.7-8.5-5.3-19-16.8-24.5z"/><path class="flex-sign" stroke-width="4" stroke-linecap="round" d="M38.2 37.2c-1.4-1.9-3.5-2.9-6.1-2.9-3.5 0-6 1.8-6 4.5 0 6.2 12.4 3.4 12.4 9.6 0 2.8-2.7 4.6-6.3 4.6-2.7 0-5-1.1-6.5-3.1M32.1 30.8v3.5M32.1 53v3.4"/></g></svg>';
+  var FLEX_ON = '<svg class="flex-ic flex-ic--on" width="18" height="18" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path class="flex-fill" d="M24 7c3 2.6 5.6 3.4 8 3.4S37 9.6 40 7l-3.2 12.4H27.2z"/><rect class="flex-fill" x="25" y="19" width="14" height="5.5" rx="2.75"/><path class="flex-fill" d="M27 24.5C15.5 30 9.5 40.5 10.2 49c.7 7.6 8.6 11 21.8 11s21.1-3.4 21.8-11c.7-8.5-5.3-19-16.8-24.5z"/><path class="flex-sign" d="M38.2 37.2c-1.4-1.9-3.5-2.9-6.1-2.9-3.5 0-6 1.8-6 4.5 0 6.2 12.4 3.4 12.4 9.6 0 2.8-2.7 4.6-6.3 4.6-2.7 0-5-1.1-6.5-3.1M32.1 30.8v3.5M32.1 53v3.4"/></svg>';
   var VERIFIED = '<svg class="verified" role="img" aria-label="Verified" width="15" height="15" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-6.5" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   /* ---------- Helpers ---------- */
@@ -683,7 +717,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     return age > 120 ? null : age;
   }
   function joined() {
-    var at = S.consents && S.consents.accepted_at;
+    var at = (S.mode === 'live' && S.joinedAt) || (S.consents && S.consents.accepted_at);
     return at ? new Date(at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
   }
   function myWhere() { return { city: 'Austin', state: 'Texas', country: 'United States' }[S.loc]; }
@@ -702,7 +736,8 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
 
   /* ---------- Shared pieces ---------- */
   function demoBar() {
-    return '<p class="demo-bar"><strong>Test version.</strong> Members, ranks, amounts and posts are made-up samples. Nothing you enter leaves this device.</p>';
+    if (S.mode === 'live') return '<p class="demo-bar"><strong>Live test account.</strong> Your profile, photo, Flexes and follows are shared with other testers. Ranks, amounts and wealth figures are still made-up samples.</p>';
+    return '<p class="demo-bar"><strong>Test version.</strong> Members, ranks, amounts and Flexes are made-up samples. In the demo, nothing you enter leaves this device.</p>';
   }
   function stepHeader(back, step) {
     var right = step
@@ -759,16 +794,36 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     return '<section class="screen screen--welcome">' +
       '<div class="stack-lg">' + demoBar() + '<div class="welcome-brand" aria-hidden="true">' + bagSVG(52) + '<div class="wordmark wordmark--xl">Wealthy</div></div><div class="ladder" aria-hidden="true">' + ladder + '</div></div>' +
       '<div class="stack-sm"><h1 class="h-xl" tabindex="-1">See where you stand.</h1><p class="lede">Link your accounts, verify what you own, and see your rank in your city, your state, your country and the world.</p></div>' +
-      '<div class="stack-sm"><a class="btn btn--primary" href="#account">Create a test account</a>' +
-      '<button class="btn btn--outline" data-action="login">Log in</button>' +
+      '<div class="stack-sm">' + welcomeButtons() +
       '<p class="fine">For adults 18 and over.</p>' + legalLinks('footer-links') + '</div>' +
       '</section>';
   }
 
+  function welcomeButtons() {
+    if (sb && INVITE) {
+      return '<button class="btn btn--primary" data-action="start-signup" data-mode="live">Create your test account</button>' +
+        '<a class="btn btn--outline" href="#login">Log in</a>' +
+        '<button class="btn btn--text btn--center" data-action="start-signup" data-mode="demo">Explore the demo without an account</button>';
+    }
+    return '<button class="btn btn--primary" data-action="start-signup" data-mode="demo">Explore the demo</button>' +
+      (sb ? '<a class="btn btn--outline" href="#login">Log in to a test account</a>' : '') +
+      '<p class="fine">Invited to test Wealthy? Open your invite link to create an account.</p>';
+  }
+  function fieldError(id, msg) { return msg ? '<p class="error" id="' + id + '-error">' + esc(msg) + '</p>' : ''; }
+  function fieldAria(id, msg) { return ' aria-describedby="' + id + '-hint' + (msg ? ' ' + id + '-error' : '') + '"' + (msg ? ' aria-invalid="true"' : ''); }
   function account() {
     var f = UI.form;
+    var live = UI.signup === 'live' && !!sb && !!INVITE;
+    var liveFields = !live ? '' :
+      '<div class="field"><label for="su-name">Display name</label><input class="input" id="su-name" type="text" maxlength="50" autocomplete="nickname" value="' + esc(f.name || '') + '"' + fieldAria('su-name', f.nameError) + '><span class="small" id="su-name-hint">Other testers see this on your Flexes. It doesn\'t have to be your legal name.</span>' + fieldError('su-name', f.nameError) + '</div>' +
+      '<div class="field"><label for="su-email">Email</label><input class="input" id="su-email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" value="' + esc(f.email || '') + '"' + fieldAria('su-email', f.emailError) + '><span class="small" id="su-email-hint">You\'ll use it to log in. Other members never see it.</span>' + fieldError('su-email', f.emailError) + '</div>' +
+      '<div class="field"><label for="su-password">Password</label><input class="input" id="su-password" type="password" autocomplete="new-password" maxlength="72" value="' + esc(f.password || '') + '"' + fieldAria('su-password', f.passwordError) + '><span class="small" id="su-password-hint">At least 8 characters.</span>' + fieldError('su-password', f.passwordError) + '</div>';
     return '<section class="screen has-dock">' + stepHeader('welcome', 1) + demoBar() +
-      '<div class="stack-sm"><h1 class="h-xl" tabindex="-1">Create your account.</h1><p class="lede">Wealthy is for adults 18 and over. We use your date of birth once to check your age, and we don\'t keep it.</p></div>' +
+      '<div class="stack-sm"><h1 class="h-xl" tabindex="-1">' + (live ? 'Create your test account.' : 'Explore the demo.') + '</h1><p class="lede">' +
+        (live ? 'Other testers will see your display name, photo and Flexes. Wealthy is for adults 18 and over; we check your date of birth once and don\'t keep it.'
+              : 'Nothing you enter leaves this device. Wealthy is for adults 18 and over; we check your date of birth once and don\'t keep it.') + '</p></div>' +
+      (f.formError ? '<p class="error" role="alert">' + esc(f.formError) + '</p>' : '') +
+      liveFields + 
       '<div class="field"><label for="dob">Date of birth</label>' +
         '<input class="input" id="dob" type="date" autocomplete="bday" aria-describedby="dob-hint' + (f.dobError ? ' dob-error' : '') + '"' + (f.dobError ? ' aria-invalid="true"' : '') + (f.dob ? ' value="' + esc(f.dob) + '"' : '') + '>' +
         '<span class="small" id="dob-hint">Only used to confirm you\'re 18 or older.</span>' +
@@ -779,7 +834,19 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
         '<label class="check"><input type="checkbox" id="agree-marketing"' + (f.marketing ? ' checked' : '') + '><span>Send me product news by email. Optional; every email has an unsubscribe link.</span></label>' +
       '</fieldset>' +
       '</section>' +
-      '<div class="dock"><button class="btn btn--primary" data-action="create-account">Continue</button></div>';
+      '<div class="dock"><button class="btn btn--primary" data-action="create-account"' + (UI.busy ? ' disabled aria-busy="true"' : '') + '>' + (UI.busy ? 'Creating your account…' : 'Continue') + '</button></div>';
+  }
+  function login() {
+    var f = UI.form;
+    return '<section class="screen has-dock">' + stepHeader('welcome', 0) +
+      '<div class="stack-sm"><h1 class="h-xl" tabindex="-1">Log in.</h1><p class="lede">Log in to your live test account.</p></div>' +
+      (UI.loginError ? '<p class="error" role="alert">' + esc(UI.loginError) + '</p>' : '') +
+      '<div class="field"><label for="li-email">Email</label><input class="input" id="li-email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" value="' + esc(f.loginEmail || '') + '"></div>' +
+      '<div class="field"><label for="li-password">Password</label><input class="input" id="li-password" type="password" autocomplete="current-password"></div>' +
+      '<p class="small">Forgot your password? Ask the person who invited you to reset it.</p>' +
+      (sb ? '' : '<p class="error">This page can\'t reach Wealthy\'s servers, so logging in won\'t work here. Open your invite link instead.</p>') +
+      '</section>' +
+      '<div class="dock"><button class="btn btn--primary" data-action="login-submit"' + (UI.busy ? ' disabled aria-busy="true"' : '') + '>' + (UI.busy ? 'Logging in…' : 'Log in') + '</button></div>';
   }
 
   function underage() {
@@ -826,9 +893,11 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
           switchRow('marketing', 'Product news by email', 'Optional. Turning this off unsubscribes you; every email also has an unsubscribe link.', S.marketing) +
           switchRow('analytics', 'Allow analytics', 'Optional. This test version has no analytics installed, so nothing is collected either way.', analyticsOn) +
         '</section>' +
+        blockedSection() +
         '<section class="stack-md" aria-labelledby="h-data"><h2 class="h2" id="h-data">Your data</h2>' +
           '<p class="small">Download a copy of everything this app has stored about you, or delete it all.</p>' +
           '<div class="row-btns"><button class="btn btn--outline btn--sm" data-action="download">Download my data</button><button class="btn btn--outline btn--sm" data-action="delete-open">Delete my account and data</button></div>' +
+          (isLive() ? '<button class="btn btn--text" data-action="logout">Log out</button>' : '') +
         '</section>' +
         '<section aria-labelledby="h-legal"><h2 class="h2" id="h-legal">Legal</h2><div class="link-list">' +
           LEGAL.map(function (l) { return '<a href="' + l.href + '">' + l.label + '<span class="chev" aria-hidden="true">' + I.chevron + '</span></a>'; }).join('') +
@@ -864,7 +933,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
 
   function deleted() {
     return '<section class="screen">' +
-      '<div class="stack-sm"><h1 class="h-xl" tabindex="-1">Your data is deleted.</h1><p class="lede">Everything this test app stored on this device is gone: your name, photo, settings, posts and privacy choices.</p></div>' +
+      '<div class="stack-sm"><h1 class="h-xl" tabindex="-1">Your data is deleted.</h1><p class="lede">Everything this test app stored on this device is gone: your name, photo, settings, Flexes and privacy choices.</p></div>' +
       '<a class="btn btn--primary" href="#welcome">Back to the start</a>' +
       '</section>';
   }
@@ -895,11 +964,14 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     return true;
   }
   function feedPosts() {
-    var mine = S.myPosts.map(function (p) { return Object.assign({ mine: true }, p); });
-    return mine.concat(UI.live, FEED).filter(function (p) {
-      if (UI.feedTab === 'following') return p.mine || S.following.indexOf(p.handle) !== -1;
+    var mine = isLive() ? [] : S.myPosts.map(function (p) { return Object.assign({ mine: true }, p); });
+    var remote = isLive() ? UI.remote : [];
+    return remote.concat(mine, UI.live, FEED).filter(function (p) {
+      if (S.hiddenPosts.indexOf(p.id) !== -1) return false;
+      if (!p.live && !p.mine && S.hiddenSample.indexOf(p.handle) !== -1) return false;
+      if (UI.feedTab === 'following') return p.mine || (p.live ? S.followingIds.indexOf(p.authorId) !== -1 : S.following.indexOf(p.handle) !== -1);
       if (UI.feedTab === 'milestones') return !!p.milestone;
-      if (UI.feedTab === 'near') return p.mine || nearYou(p.place);
+      if (UI.feedTab === 'near') return p.mine || p.live || nearYou(p.place);
       return true;
     });
   }
@@ -910,37 +982,39 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   function postHTML(p) {
     var mine = !!p.mine;
     var name = mine ? displayName() : p.name;
-    var handle = mine ? handleFor(name) : p.handle;
-    var ini = mine ? initials(name) : p.ini;
-    var where = mine ? myWhere() : p.where;
+    var handle = mine ? (S.handle || handleFor(name)) : p.handle;
+    var ini = (mine || p.live) ? initials(name) : p.ini;
+    var photo = mine ? S.photo : (p.photo || null);
     var time = p.at ? relTime(p.at) : p.time;
-    var cheered = S.cheered.indexOf(p.id) !== -1;
+    var cheered = p.live ? !!p.cheeredByMe : S.cheered.indexOf(p.id) !== -1;
+    var cheers = p.live ? (p.cheers || 0) : (p.cheers || 0) + (cheered ? 1 : 0);
     var reposted = S.reposted.indexOf(p.id) !== -1;
-    var cheers = (p.cheers || 0) + (cheered ? 1 : 0);
     var reposts = (p.reposts || 0) + (reposted ? 1 : 0);
     var replies = p.replies || 0;
-    var following = S.following.indexOf(p.handle) !== -1;
+    var following = p.live ? S.followingIds.indexOf(p.authorId) !== -1 : S.following.indexOf(p.handle) !== -1;
     var ms = p.milestone ? MILESTONES[p.milestone] : null;
     var msLabel = ms ? (p.msLabel || ms.label) : '';
     var badge = ms ? '<span class="badge">' + I[ms.icon] + esc(msLabel) + '</span>'
       : (p.rankText ? '<span class="badge">' + I.podium + esc(p.rankText) + (p.rank ? ', now ' + p.rank : '') + '</span>' : '');
     var headBtn = mine
-      ? '<button class="follow-btn" data-action="delete-post" data-id="' + esc(p.id) + '" aria-label="Delete your post">Delete</button>'
-      : '<button class="follow-btn" data-action="follow" data-handle="' + esc(p.handle) + '" aria-pressed="' + following + '" aria-label="' + (following ? 'Following ' : 'Follow ') + esc(name) + '">' + (following ? 'Following' : 'Follow') + '</button>';
+      ? '<button class="follow-btn" data-action="' + (p.live ? 'delete-live' : 'delete-post') + '" data-id="' + esc(p.id) + '" aria-label="Delete your Flex">Delete</button>'
+      : '<button class="follow-btn" data-action="' + (p.live ? 'follow-live' : 'follow') + '" data-id="' + esc(p.id) + '" data-handle="' + esc(p.handle) + '" aria-pressed="' + following + '" aria-label="' + (following ? 'Following ' : 'Follow ') + esc(name) + '">' + (following ? 'Following' : 'Follow') + '</button>' +
+        '<button class="icon-btn icon-btn--plain" data-action="more" data-id="' + esc(p.id) + '" aria-label="Report or block, Flex by ' + esc(name) + '">' + I.dots + '</button>';
+    var tag = p.live ? (mine ? 'Your Flex · Live test' : 'Live test account') : (mine ? esc(myWhere()) : esc(p.where) + ' · Sample Flex');
     var pop = UI.justAdded.indexOf(p.id) !== -1 ? ' pop' : '';
-    return '<article class="post' + pop + '" aria-label="' + esc((mine ? 'Your post' : 'Sample post by ' + name) + (msLabel ? ', ' + msLabel : '')) + '">' +
-      avatarHTML(ini, mine ? S.photo : null, 44) +
+    return '<article class="post' + pop + '" aria-label="' + esc((mine ? 'Your Flex' : (p.live ? 'Flex by ' : 'Sample Flex by ') + name) + (msLabel ? ', ' + msLabel : '')) + '">' +
+      avatarHTML(ini, photo, 44) +
       '<div class="post-main">' +
-        '<div class="post-head"><div class="who"><div class="name-line"><span class="name">' + esc(name) + '</span>' + (mine ? '' : VERIFIED) + '</div><span class="handle">@' + esc(handle) + ' · ' + esc(time) + '</span></div>' + headBtn + '</div>' +
+        '<div class="post-head"><div class="who"><div class="name-line"><span class="name">' + esc(name) + '</span>' + (mine || p.live ? '' : VERIFIED) + '</div><span class="handle">@' + esc(handle) + ' · ' + esc(time) + '</span></div>' + headBtn + '</div>' +
         badge +
         (p.body ? '<p class="post-body">' + esc(p.body) + '</p>' : '') +
         (ms ? artFigure(p.milestone) : '') +
-        '<span class="sample-tag">' + esc(where) + (mine ? '' : ' · Sample post') + '</span>' +
+        '<span class="sample-tag">' + tag + '</span>' +
         '<div class="actions">' +
           '<button class="act" data-action="reply" data-id="' + esc(p.id) + '" aria-label="Reply, ' + fmtCount(replies) + ' replies">' + I.comment + '<span aria-hidden="true">' + fmtCount(replies) + '</span></button>' +
           '<button class="act act--repost" data-action="repost" data-id="' + esc(p.id) + '" aria-pressed="' + reposted + '" aria-label="Repost, ' + fmtCount(reposts) + ' reposts">' + I.repost + '<span aria-hidden="true">' + fmtCount(reposts) + '</span></button>' +
-          '<button class="act" data-action="cheer" data-id="' + esc(p.id) + '" aria-pressed="' + cheered + '" aria-label="Cheer, ' + fmtCount(cheers) + ' cheers">' + I.star + '<span aria-hidden="true">' + fmtCount(cheers) + '</span></button>' +
-          '<button class="act" data-action="share" data-id="' + esc(p.id) + '" aria-label="Share post">' + I.share + '</button>' +
+          '<button class="act act--flex" data-action="' + (p.live ? 'cheer-live' : 'cheer') + '" data-id="' + esc(p.id) + '" aria-pressed="' + cheered + '" aria-label="' + (cheered ? 'Flexed' : 'Flex') + ', ' + fmtCount(cheers) + (cheers === 1 ? ' flex' : ' flexes') + '">' + (cheered ? FLEX_ON : FLEX_OFF) + '<span aria-hidden="true">' + (cheered ? 'Flexed ' : 'Flex ') + fmtCount(cheers) + '</span></button>' +
+          '<button class="act" data-action="share" data-id="' + esc(p.id) + '" aria-label="Share Flex">' + I.share + '</button>' +
         '</div>' +
       '</div></article>';
   }
@@ -948,7 +1022,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     var u = UPDATES[S.loc];
     return '<section class="card card--tight" aria-label="Your sample update"><span class="eyebrow eyebrow--accent">This month</span>' +
       '<p class="update-text">You climbed ' + u.places + ' places in ' + u.where + '. You\'re now ' + u.rank + '.</p>' +
-      '<div class="row-btns">' + (S.board ? '<button class="btn btn--primary btn--sm" data-action="share-rank">Share to feed</button>' : '') + '<a class="btn btn--outline btn--sm" href="#rankings">See rankings</a></div></section>';
+      '<div class="row-btns">' + (S.board && !isLive() ? '<button class="btn btn--primary btn--sm" data-action="share-rank">Share as a Flex</button>' : '') + '<a class="btn btn--outline btn--sm" href="#rankings">See rankings</a></div></section>';
   }
   function skeletons(n) {
     var s = '';
@@ -956,7 +1030,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       s += '<div class="sk-post" aria-hidden="true"><span class="sk sk-av"></span><div class="sk-lines"><span class="sk sk-l1"></span><span class="sk sk-l2"></span>' +
         (i % 2 === 0 ? '<span class="sk sk-media"></span>' : '<span class="sk sk-l3"></span>') + '</div></div>';
     }
-    return s + '<p class="sr">Loading posts</p>';
+    return s + '<p class="sr">Loading Flexes</p>';
   }
   var FEED_TABS = [['foryou', 'For you'], ['following', 'Following'], ['milestones', 'Milestones'], ['near', 'Near you']];
   function feed() {
@@ -966,8 +1040,8 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     }).join('');
     var posts = feedPosts();
     var empty = UI.feedTab === 'following'
-      ? '<div class="empty"><p class="lede">Follow members to see their posts here.</p><button class="btn btn--outline btn--sm" data-action="feed-tab" data-key="foryou">Find people in For you</button></div>'
-      : '<div class="empty"><p class="lede">No posts here yet.</p><button class="btn btn--outline btn--sm" data-action="compose">Write a post</button></div>';
+      ? '<div class="empty"><p class="lede">Follow members to see their Flexes here.</p><button class="btn btn--outline btn--sm" data-action="feed-tab" data-key="foryou">Find people in For you</button></div>'
+      : '<div class="empty"><p class="lede">No Flexes here yet.</p><button class="btn btn--outline btn--sm" data-action="compose">Post a Flex</button></div>';
     var list = UI.feedLoading ? skeletons(3) : (posts.length ? posts.map(postHTML).join('') : empty);
     return '<section class="screen has-tabs">' +
       topbar('<button class="icon-btn" data-action="soon" data-msg="Search isn\'t in this test version yet." aria-label="Search">' + I.search + '</button>') +
@@ -976,7 +1050,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       '<div class="feed-tabs" role="group" aria-label="Choose a feed">' + tabs + '</div>' +
       (UI.feedTab === 'foryou' && !UI.feedLoading ? updateCard() : '') +
       '<div class="feed-list" aria-busy="' + UI.feedLoading + '">' + list + '</div>' +
-      '<button class="fab" data-action="compose" aria-label="Write a post">' + I.plus + '</button>' +
+      '<button class="fab" data-action="compose" aria-label="Post a Flex">' + I.plus + '</button>' +
       '</section>';
   }
   function reducedMotion() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
@@ -988,23 +1062,280 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   function startFeedLoad() {
     UI.feedLoading = true;
     clearTimeout(UI.feedTimer);
-    UI.feedTimer = setTimeout(function () {
+    var wait = new Promise(function (res) { UI.feedTimer = setTimeout(res, reducedMotion() ? 250 : 800); });
+    Promise.all([wait, loadLiveFeed()]).then(function () {
       UI.feedLoading = false;
       if (current() === 'feed') render();
-    }, reducedMotion() ? 250 : 800);
+    });
   }
   function renderPill() {
     var n = UI.pending.length;
     if (current() !== 'feed' || !n || UI.feedLoading || UI.sheet) { pillRoot.innerHTML = ''; return; }
     var faces = UI.pending.slice(0, 3).map(function (p) { return avatarHTML(p.ini, null, 26); }).join('');
-    pillRoot.innerHTML = '<button class="new-pill" data-action="show-new"><span class="pill-faces" aria-hidden="true">' + faces + '</span><span>Show ' + n + ' new post' + (n === 1 ? '' : 's') + '</span></button>';
+    pillRoot.innerHTML = '<button class="new-pill" data-action="show-new"><span class="pill-faces" aria-hidden="true">' + faces + '</span><span>Show ' + n + ' new Flex' + (n === 1 ? '' : 'es') + '</span></button>';
   }
   function feedTick() {
     if (current() !== 'feed' || UI.feedLoading || !UI.queue.length || document.hidden) return;
     UI.pending.push(UI.queue.shift());
     renderPill();
-    announce(UI.pending.length === 1 ? '1 new post is ready to show' : UI.pending.length + ' new posts are ready to show');
+    announce(UI.pending.length === 1 ? '1 new Flex is ready to show' : UI.pending.length + ' new Flexes are ready to show');
   }
+
+  /* ---------- Live test account data ---------- */
+  function isLive() { return S.mode === 'live' && !!sb && !!S.me; }
+  function liveHandle(name) {
+    var h = handleFor(name);
+    if (h.length < 3) h = h + '.wealthy';
+    return h.slice(0, 30);
+  }
+  function errText(err, fallback) {
+    var m = err && err.message ? String(err.message) : '';
+    return /can't include|isn't allowed|reserved/i.test(m) ? m : fallback;
+  }
+  var pushQueue = {}, pushTimer = null;
+  function pushProfile(fields) {
+    if (!isLive()) return;
+    Object.assign(pushQueue, fields);
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(function () { flushProfile(false); }, 350);
+  }
+  function flushProfile(retry) {
+    var f = pushQueue; pushQueue = {};
+    if (!Object.keys(f).length) return Promise.resolve();
+    return sb.from('profiles').update(f).eq('id', S.me).then(function (r) {
+      if (!r.error) { if (f.handle) { S.handle = f.handle; save(); } return; }
+      if (r.error.code === '23505' && f.handle && !retry) {
+        pushQueue = Object.assign({}, f, { handle: f.handle.slice(0, 26) + Math.floor(100 + Math.random() * 900) });
+        return flushProfile(true);
+      }
+      toast(errText(r.error, "Couldn't save that change. Check your connection and try again."));
+    });
+  }
+  function loadLiveProfile() {
+    return sb.from('profiles').select('display_name, handle, avatar_path, show_amount, show_location, on_leaderboards, allow_follows, marketing_email_opt_in, terms_version, privacy_version, terms_accepted_at, created_at').eq('id', S.me).maybeSingle().then(function (r) {
+      if (r.error || !r.data) return false;
+      var p = r.data;
+      S.name = p.display_name === 'New member' ? (S.name || '') : p.display_name;
+      S.handle = p.handle; S.photo = p.avatar_path || null;
+      S.amount = p.show_amount; S.loc = p.show_location; S.board = p.on_leaderboards; S.follow = p.allow_follows;
+      S.marketing = p.marketing_email_opt_in; S.joinedAt = p.created_at;
+      S.consents = { terms_version: p.terms_version, privacy_version: p.privacy_version, accepted_at: p.terms_accepted_at };
+      return Promise.all([
+        sb.from('follows').select('followee_id').eq('follower_id', S.me),
+        sb.from('public_profiles').select('follower_count, following_count').eq('user_id', S.me).maybeSingle(),
+        sb.from('blocks').select('blocked_id').eq('blocker_id', S.me)
+      ]).then(function (res) {
+        S.followingIds = (res[0].data || []).map(function (x) { return x.followee_id; });
+        UI.myCounts = res[1].data || { follower_count: 0, following_count: 0 };
+        var names = {};
+        (res[2].data || []).forEach(function (x) { names[x.blocked_id] = S.blockedNames[x.blocked_id] || 'A blocked member'; });
+        S.blockedNames = names;
+        save();
+        return true;
+      });
+    }, function () { return false; });
+  }
+  function mapLivePost(row, prof, cheerRows) {
+    prof = prof || {};
+    var mine = row.author_id === S.me;
+    var cs = cheerRows.filter(function (c) { return c.post_id === row.id; });
+    var name = mine ? displayName() : (prof.display_name || 'Member');
+    return {
+      id: 'L' + row.id, dbId: row.id, live: true, mine: mine, authorId: row.author_id,
+      name: name, handle: mine ? (S.handle || liveHandle(name)) : (prof.handle || 'member'), ini: initials(name),
+      photo: mine ? S.photo : (prof.avatar_path || null), where: prof.location_label || '',
+      at: Date.parse(row.created_at), milestone: MILESTONES[row.milestone_code] ? row.milestone_code : null, body: row.body,
+      cheers: cs.length, cheeredByMe: cs.some(function (c) { return c.user_id === S.me; }), replies: 0, reposts: 0
+    };
+  }
+  function fetchLivePosts() {
+    return sb.from('posts').select('id, author_id, milestone_code, body, created_at').order('created_at', { ascending: false }).limit(60).then(function (r) {
+      if (r.error) throw r.error;
+      var rows = r.data || [];
+      var authorIds = rows.map(function (x) { return x.author_id; }).filter(function (v, i, a) { return a.indexOf(v) === i; });
+      var postIds = rows.map(function (x) { return x.id; });
+      return Promise.all([
+        authorIds.length ? sb.from('public_profiles').select('user_id, handle, display_name, avatar_path, location_label').in('user_id', authorIds) : Promise.resolve({ data: [] }),
+        postIds.length ? sb.from('cheers').select('post_id, user_id').in('post_id', postIds) : Promise.resolve({ data: [] })
+      ]).then(function (res) {
+        var byUser = {};
+        (res[0].data || []).forEach(function (p) { byUser[p.user_id] = p; });
+        var cheers = res[1].data || [];
+        return rows
+          .filter(function (x) { return x.author_id === S.me || byUser[x.author_id]; })
+          .map(function (x) { return mapLivePost(x, byUser[x.author_id], cheers); })
+          .filter(function (p) { return S.hiddenPosts.indexOf(p.id) === -1; });
+      });
+    });
+  }
+  function loadLiveFeed() {
+    if (!isLive()) return Promise.resolve();
+    return fetchLivePosts().then(function (posts) {
+      UI.remote = posts;
+      UI.remoteIds = {};
+      posts.forEach(function (p) { UI.remoteIds[p.id] = true; });
+      UI.pending = UI.pending.filter(function (p) { return !p.live; });
+    }, function () { toast("Couldn't load live posts. Check your connection."); });
+  }
+  function liveTick() {
+    if (!isLive() || current() !== 'feed' || UI.feedLoading || document.hidden) return;
+    fetchLivePosts().then(function (posts) {
+      var newOnes = posts.filter(function (p) {
+        return !UI.remoteIds[p.id] && !p.mine && !UI.pending.some(function (q) { return q.id === p.id; });
+      });
+      if (!newOnes.length) return;
+      UI.pending = newOnes.concat(UI.pending);
+      renderPill();
+      announce(UI.pending.length === 1 ? '1 new Flex is ready to show' : UI.pending.length + ' new Flexes are ready to show');
+    }, function () {});
+  }
+  function findPost(id) {
+    var all = UI.remote.concat(UI.live, FEED, S.myPosts);
+    for (var i = 0; i < all.length; i++) if (all[i].id === id) return all[i];
+    return null;
+  }
+  function localSignOut() {
+    var keepConsent = C;
+    try { localStorage.removeItem(KEY); } catch (e) {}
+    S = fresh(); C = keepConsent;
+    UI.remote = []; UI.remoteIds = {}; UI.pending = []; UI.myCounts = null; UI.live = []; UI.queue = INCOMING.slice();
+  }
+  function restoreSession() {
+    if (!sb) return;
+    sb.auth.getSession().then(function (r) {
+      var sess = r && r.data && r.data.session;
+      if (sess) {
+        if (S.me && S.me !== sess.user.id) localSignOut();
+        S.me = sess.user.id; S.mode = 'live'; save();
+        loadLiveProfile().then(function () { render(); });
+      } else if (S.mode === 'live') {
+        localSignOut(); render();
+        toast('You were logged out. Log in to continue.');
+      }
+    }, function () {});
+  }
+  function uploadLivePhoto(dataUrl) {
+    toast('Uploading photo…');
+    return fetch(dataUrl).then(function (r) { return r.blob(); }).then(function (blob) {
+      var path = S.me + '/avatar-' + Date.now() + '.jpg';
+      return sb.storage.from('avatars').upload(path, blob, { contentType: 'image/jpeg', upsert: false }).then(function (up) {
+        if (up.error) throw up.error;
+        var url = sb.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+        S.photo = url; save(); pushProfile({ avatar_path: url }); render(); toast('Photo updated');
+        return removeOldPhotos(path);
+      });
+    }).catch(function () { toast("Couldn't upload that photo. Try again."); });
+  }
+  function removeOldPhotos(keep) {
+    return sb.storage.from('avatars').list(S.me).then(function (res) {
+      var old = (res.data || []).map(function (o) { return S.me + '/' + o.name; }).filter(function (p) { return p !== keep; });
+      if (old.length) return sb.storage.from('avatars').remove(old);
+    }).catch(function () {});
+  }
+  function deleteLiveAccount() {
+    toast('Deleting your account…');
+    removeOldPhotos(null).then(function () { return sb.rpc('delete_my_test_account'); }).then(function (r) {
+      if (r && r.error) { toast("Couldn't delete your account. Try again."); return; }
+      var done = function () { eraseEverything(); go('deleted'); };
+      sb.auth.signOut().then(done, done);
+    }, function () { toast("Couldn't delete your account. Try again."); });
+  }
+  function readSignupForm() {
+    var v = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
+    var c = function (id) { var el = document.getElementById(id); return !!(el && el.checked); };
+    return { dob: v('dob'), terms: c('agree-terms'), marketing: c('agree-marketing'), name: v('su-name').trim().slice(0, 50), email: v('su-email').trim(), password: v('su-password') };
+  }
+  function focusInvalid() {
+    var bad = document.querySelector('[aria-invalid="true"]');
+    if (bad) bad.focus();
+  }
+  function createAccount() {
+    var live = UI.signup === 'live' && !!sb && !!INVITE;
+    var f = readSignupForm();
+    var age = ageOn(f.dob);
+    f.dobError = age === null ? 'Enter your date of birth.' : '';
+    f.termsError = f.terms ? '' : 'To continue, agree to the Terms of Service and confirm you\'ve read the Privacy Policy.';
+    if (live) {
+      f.nameError = f.name ? '' : 'Enter a display name.';
+      f.emailError = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email) ? '' : 'Enter a valid email address.';
+      f.passwordError = f.password.length >= 8 ? '' : 'Use at least 8 characters.';
+    }
+    UI.form = f;
+    if (f.dobError || f.termsError || f.nameError || f.emailError || f.passwordError) { render(); focusInvalid(); return; }
+    if (age < 18) { UI.form = {}; S.underageAt = new Date().toISOString(); save(); go('underage'); return; }
+    var now = new Date().toISOString();
+    if (!live) { // demo: the date of birth is discarded here and never saved
+      UI.form = {};
+      S.mode = 'demo'; S.ageConfirmedAt = now; S.marketing = f.marketing;
+      S.consents = { terms_version: TERMS_VERSION, privacy_version: PRIVACY_VERSION, accepted_at: now };
+      save(); go('connect');
+      return;
+    }
+    UI.busy = true; render();
+    fetch(LIVE_CFG.url + '/functions/v1/' + LIVE_CFG.signup, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: LIVE_CFG.key },
+      body: JSON.stringify({ email: f.email, password: f.password, display_name: f.name, dob: f.dob, accepted_terms: true,
+        terms_version: TERMS_VERSION, privacy_version: PRIVACY_VERSION, marketing: f.marketing, invite: INVITE })
+    }).then(function (r) { return r.json(); }).then(function (out) {
+      if (!out || !out.ok) {
+        UI.busy = false;
+        if (out && out.code === 'underage') { UI.form = {}; S.underageAt = new Date().toISOString(); save(); go('underage'); return; }
+        var map = { dob: 'dobError', terms: 'termsError', name: 'nameError', email: 'emailError', taken: 'emailError', password: 'passwordError' };
+        UI.form.password = '';
+        if (out && map[out.code]) UI.form[map[out.code]] = out.error;
+        else UI.form.formError = (out && out.error) || 'Something went wrong. Try again.';
+        render(); focusInvalid();
+        return;
+      }
+      return sb.auth.signInWithPassword({ email: f.email, password: f.password }).then(function (res) {
+        UI.busy = false;
+        if (res.error || !res.data || !res.data.session) { UI.form = {}; UI.loginError = 'Your account was created, but logging in failed. Try logging in.'; go('login'); return; }
+        S.mode = 'live'; S.me = res.data.user.id; S.name = f.name; S.marketing = f.marketing; S.ageConfirmedAt = now;
+        S.consents = { terms_version: TERMS_VERSION, privacy_version: PRIVACY_VERSION, accepted_at: now };
+        UI.form = {}; save();
+        return loadLiveProfile().then(function () { go('connect'); });
+      });
+    }).catch(function () {
+      UI.busy = false; UI.form.password = '';
+      UI.form.formError = 'We couldn\'t reach Wealthy\'s servers. Check your connection and try again.';
+      render();
+    });
+  }
+  function submitLogin() {
+    var email = (document.getElementById('li-email') || {}).value || '';
+    var password = (document.getElementById('li-password') || {}).value || '';
+    UI.form = { loginEmail: email.trim() };
+    if (!email.trim() || !password) { UI.loginError = 'Enter your email and password.'; render(); return; }
+    if (!sb) { UI.loginError = 'This page can\'t reach Wealthy\'s servers, so logging in won\'t work here.'; render(); return; }
+    UI.busy = true; UI.loginError = ''; render();
+    sb.auth.signInWithPassword({ email: email.trim(), password: password }).then(function (res) {
+      UI.busy = false;
+      if (res.error || !res.data || !res.data.session) { UI.loginError = 'That email and password don\'t match a test account.'; render(); return; }
+      localSignOut();
+      S.mode = 'live'; S.me = res.data.user.id; S.onboarded = true; UI.form = {};
+      save();
+      loadLiveProfile().then(function () { go('rankings'); toast('Welcome back'); });
+    }, function () {
+      UI.busy = false;
+      UI.loginError = 'We couldn\'t reach Wealthy\'s servers. Check your connection and try again.';
+      render();
+    });
+  }
+  function blockedSection() {
+    var rows = Object.keys(S.blockedNames || {}).map(function (id) {
+      return '<div class="switch-row"><span class="grow"><span class="opt-title">' + esc(S.blockedNames[id]) + '</span></span><button class="btn btn--outline btn--sm" data-action="unblock" data-id="' + esc(id) + '">Unblock</button></div>';
+    }).join('') + S.hiddenSample.map(function (h) {
+      return '<div class="switch-row"><span class="grow"><span class="opt-title">@' + esc(h) + '</span><span class="small">Sample member</span></span><button class="btn btn--outline btn--sm" data-action="unblock-sample" data-handle="' + esc(h) + '">Unblock</button></div>';
+    }).join('');
+    return rows ? '<section aria-labelledby="h-blocked"><h2 class="h2" id="h-blocked">Blocked accounts</h2>' + rows + '</section>' : '';
+  }
+  function deleteText() {
+    return isLive()
+      ? 'This permanently deletes your live test account right away: your profile, photo, Flexes, follows and settings, on this device and on our servers. This can\'t be undone.'
+      : 'This erases your name, photo, settings, Flexes and privacy choices from this device. In the full app it also disconnects your linked accounts and erases your data from our servers within 30 days. This can\'t be undone.';
+  }
+  var REPORT_REASONS = [['harassment', 'Harassment or bullying'], ['scam', 'Scam or fraud'], ['impersonation', 'Pretending to be someone else'], ['doxxing', 'Sharing someone\'s private information'], ['false_wealth', 'Fake wealth or ranks'], ['other', 'Something else']];
 
   function wealth() {
     var bar = MIX.map(function (m) { return '<span style="flex:' + m.w + ' 1 0;background:var(' + m.c + ')"></span>'; }).join('');
@@ -1034,8 +1365,8 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
         '<div class="avatar-wrap">' + avatarHTML(initials(name), S.photo, 104, true, S.photo ? 'Profile photo of ' + name : '') +
           '<button class="camera" data-action="pick-photo" data-target="photo-input-profile" aria-label="' + (S.photo ? 'Change profile photo' : 'Add profile photo') + '">' + I.camera + '</button>' +
           '<input class="sr-file" type="file" id="photo-input-profile" accept="image/*" data-photo tabindex="-1" aria-hidden="true"></div>' +
-        '<div class="stack-xs center"><h1 class="profile-name" tabindex="-1">' + esc(name) + '</h1><span class="small">@' + esc(handleFor(name)) + ' · ' + myWhere() + (j ? ' · Joined ' + j : '') + '</span></div>' +
-        '<div class="counts"><span><strong>0</strong> followers</span><span><strong>' + S.following.length + '</strong> following</span></div>' +
+        '<div class="stack-xs center"><h1 class="profile-name" tabindex="-1">' + esc(name) + '</h1><span class="small">@' + esc(S.handle || handleFor(name)) + (isLive() ? '' : ' · ' + myWhere()) + (j ? ' · Joined ' + j : '') + '</span></div>' +
+        '<div class="counts"><span><strong>' + (UI.myCounts && isLive() ? UI.myCounts.follower_count : 0) + '</strong> followers</span><span><strong>' + ((UI.myCounts && isLive() ? UI.myCounts.following_count : 0) + S.following.length) + '</strong> following</span></div>' +
         '<div class="row-btns full" style="width:100%"><a class="btn btn--outline btn--sm" href="#settings">Edit profile</a><button class="btn btn--outline btn--sm" data-action="share-profile">Share profile</button></div>' +
       '</div>' +
       '<section class="card card--tight" aria-labelledby="h-nw"><div class="card-top"><h2 class="eyebrow" id="h-nw" style="margin:0">Net worth (sample)</h2><span class="pill">' + publicAs() + '</span></div><span class="nw">$2.41M</span><span class="small">Only you see the exact figure. <a class="inline-link" href="#wealth">See breakdown</a></span></section>' +
@@ -1047,19 +1378,41 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   function sheetHTML() {
     if (UI.sheet === 'compose') {
       return '<div class="sheet-backdrop" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">' +
-        '<div class="sheet-head"><h2 class="h2" id="sheet-title">Write a post</h2><button class="icon-btn" data-action="close-sheet" aria-label="Close">' + I.close + '</button></div>' +
-        '<label class="sr" for="compose-text">Post text</label><textarea class="input textarea" id="compose-text" maxlength="500" placeholder="Share a milestone or a thought" aria-describedby="compose-count"></textarea>' +
+        '<div class="sheet-head"><h2 class="h2" id="sheet-title">Post a Flex</h2><button class="icon-btn" data-action="close-sheet" aria-label="Close">' + I.close + '</button></div>' +
+        '<label class="sr" for="compose-text">What are you flexing?</label><textarea class="input textarea" id="compose-text" maxlength="500" placeholder="What are you flexing?" aria-describedby="compose-count"></textarea>' +
         '<fieldset class="ms-pick"><legend>Add a milestone (optional)</legend><div class="ms-chips">' +
           '<label class="ms-chip"><input type="radio" name="ms" value="" checked><span>None</span></label>' +
           COMPOSE_MILESTONES.map(function (k) { return '<label class="ms-chip"><input type="radio" name="ms" value="' + k + '"><span>' + esc(MILESTONES[k].label) + '</span></label>'; }).join('') +
         '</div></fieldset>' +
-        '<div class="sheet-foot"><span class="small" id="compose-count">0 of 500 characters</span><button class="btn btn--primary btn--sm" data-action="post">Post</button></div>' +
+        '<div class="sheet-foot"><span class="small" id="compose-count">0 of 500 characters</span><button class="btn btn--primary btn--sm" data-action="post">Post Flex</button></div>' +
+        '</div></div>';
+    }
+    if (UI.sheet === 'more') {
+      var mp = findPost(UI.target) || {};
+      return '<div class="sheet-backdrop" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">' +
+        '<h2 class="h2" id="sheet-title">Flex by ' + esc(mp.name || 'this member') + '</h2>' +
+        '<div class="sheet-options">' +
+          '<button class="sheet-option" data-action="report-open">Report this Flex</button>' +
+          '<button class="sheet-option sheet-option--danger" data-action="block">Block @' + esc(mp.handle || '') + '</button>' +
+        '</div>' +
+        (mp.live ? '' : '<p class="small">This is a sample Flex. Reporting or blocking it only hides it on this device.</p>') +
+        '<button class="btn btn--outline btn--sm" data-action="close-sheet">Cancel</button>' +
+        '</div></div>';
+    }
+    if (UI.sheet === 'report') {
+      return '<div class="sheet-backdrop" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">' +
+        '<h2 class="h2" id="sheet-title">Report this Flex</h2>' +
+        '<fieldset><legend class="small">What\'s wrong with it?</legend>' +
+          REPORT_REASONS.map(function (r) { return '<label class="radio"><input type="radio" name="report-reason" value="' + r[0] + '"><span class="opt-title">' + r[1] + '</span></label>'; }).join('') +
+        '</fieldset>' +
+        '<label class="small" for="report-details">More details (optional)</label><textarea class="input textarea" id="report-details" maxlength="1000"></textarea>' +
+        '<div class="sheet-btns"><button class="btn btn--outline btn--sm" data-action="close-sheet">Cancel</button><button class="btn btn--primary btn--sm" data-action="report-submit">Send report</button></div>' +
         '</div></div>';
     }
     if (UI.sheet === 'delete') {
       return '<div class="sheet-backdrop" data-action="close-sheet"><div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="sheet-title" aria-describedby="sheet-desc">' +
         '<h2 class="h2" id="sheet-title">Delete your account and data?</h2>' +
-        '<p class="lede" id="sheet-desc">This erases your name, photo, settings, posts and privacy choices from this device. In the full app it also disconnects your linked accounts and erases your data from our servers within 30 days. This can\'t be undone.</p>' +
+        '<p class="lede" id="sheet-desc">' + deleteText() + '</p>' +
         '<div class="sheet-btns"><button class="btn btn--outline btn--sm" data-action="close-sheet">Keep my account</button><button class="btn btn--danger btn--sm" data-action="delete-confirm">Delete everything</button></div>' +
         '</div></div>';
     }
@@ -1082,7 +1435,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     sheetRoot.innerHTML = sheetHTML();
     if (UI.sheet) {
       setTimeout(function () {
-        var first = sheetRoot.querySelector(UI.sheet === 'compose' ? '#compose-text' : '[data-action="close-sheet"].btn');
+        var first = sheetRoot.querySelector({ compose: '#compose-text', more: '.sheet-option', report: 'input[name="report-reason"]' }[UI.sheet] || '[data-action="close-sheet"].btn');
         if (first) first.focus();
       }, 50);
     }
@@ -1102,7 +1455,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
 
   /* ---------- Rendering and routing ---------- */
   var VIEWS = {
-    welcome: welcome, account: account, underage: underage,
+    welcome: welcome, account: account, underage: underage, login: login,
     connect: function () { return connectView('onboarding'); },
     add: function () { return connectView('add'); },
     privacy: function () { return privacyView('onboarding'); },
@@ -1110,7 +1463,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     about: about, deleted: deleted,
     rankings: rankings, feed: feed, wealth: wealth, profile: profile
   };
-  var TITLES = { welcome: 'Wealthy', account: 'Create your account · Wealthy', underage: 'Adults only · Wealthy', connect: 'Add what you own · Wealthy', add: 'Add what you own · Wealthy', privacy: 'How you appear · Wealthy', settings: 'Settings · Wealthy', about: 'About · Wealthy', deleted: 'Data deleted · Wealthy', rankings: 'Rankings · Wealthy', feed: 'Feed · Wealthy', wealth: 'Your wealth · Wealthy', profile: 'Profile · Wealthy' };
+  var TITLES = { login: 'Log in · Wealthy', welcome: 'Wealthy', account: 'Create your account · Wealthy', underage: 'Adults only · Wealthy', connect: 'Add what you own · Wealthy', add: 'Add what you own · Wealthy', privacy: 'How you appear · Wealthy', settings: 'Settings · Wealthy', about: 'About · Wealthy', deleted: 'Data deleted · Wealthy', rankings: 'Rankings · Wealthy', feed: 'Feed · Wealthy', wealth: 'Your wealth · Wealthy', profile: 'Profile · Wealthy' };
   var TABS = ['rankings', 'feed', 'wealth', 'profile'];
   var MEMBER_ONLY = ['rankings', 'feed', 'wealth', 'profile', 'settings', 'add'];
   var NEEDS_CONSENT = ['connect', 'privacy'];
@@ -1124,6 +1477,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     var h = decodeURIComponent(location.hash.slice(1));
     if (h === 'about' || h === 'deleted') return h;
     if (S.underageAt && !S.onboarded) return 'underage';
+    if (h === 'login') return S.onboarded ? 'rankings' : 'login';
     if (!Object.prototype.hasOwnProperty.call(VIEWS, h)) return S.onboarded ? 'rankings' : 'welcome';
     if (MEMBER_ONLY.indexOf(h) !== -1 && !S.onboarded) return 'welcome';
     if (NEEDS_CONSENT.indexOf(h) !== -1 && !S.consents) return 'account';
@@ -1207,10 +1561,11 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       navigator.share({ title: 'Wealthy', text: text, url: url }).catch(function (e) { if (!e || e.name !== 'AbortError') copy(); });
     } else { copy(); }
   }
-  function downloadData() {
+  function downloadData(server) {
     var data = {
       exported_at: new Date().toISOString(),
-      about: 'Everything the Wealthy test app has stored on this device. Nothing was sent to a server.',
+      about: server ? 'Everything Wealthy holds about your live test account, plus what this app stored on this device.' : 'Everything the Wealthy test app has stored on this device.',
+      server_account: server || null,
       profile: { display_name: displayName(), handle: handleFor(displayName()), photo: S.photo ? 'Included as a data URL in profile_photo' : null },
       profile_photo: S.photo,
       display_choices: { net_worth_shown_as: S.amount, location_shown_as: S.loc, on_public_leaderboards: S.board, allow_follows: S.follow },
@@ -1233,6 +1588,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   function eraseEverything() {
     try { localStorage.removeItem(KEY); localStorage.removeItem(CONSENT_KEY); } catch (e) {}
     S = fresh(); C = null;
+    UI.remote = []; UI.remoteIds = {}; UI.myCounts = null; UI.signup = 'demo';
     UI.scope = 'city'; UI.feedTab = 'foryou'; UI.live = []; UI.pending = []; UI.queue = INCOMING.slice(); UI.form = { error: '', dobError: '' }; UI.showConsent = false;
   }
 
@@ -1245,30 +1601,15 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     if (el.tagName === 'A') e.preventDefault();
 
     if (a === 'skip') { var h1 = root.querySelector('h1'); if (h1) h1.focus(); }
-    else if (a === 'login') { toast('There are no accounts in this test version. Create a test account instead.'); }
-    else if (a === 'create-account') {
-      var dob = document.getElementById('dob').value;
-      var terms = document.getElementById('agree-terms').checked;
-      var marketing = document.getElementById('agree-marketing').checked;
-      var age = ageOn(dob);
-      UI.form = { dob: dob, terms: terms, marketing: marketing, dobError: '', termsError: '' };
-      if (age === null) UI.form.dobError = 'Enter your date of birth.';
-      if (!terms) UI.form.termsError = 'To continue, agree to the Terms of Service and confirm you\'ve read the Privacy Policy.';
-      if (UI.form.dobError || UI.form.termsError) {
-        render();
-        var bad = document.querySelector('[aria-invalid="true"]');
-        if (bad) bad.focus();
-        return;
-      }
-      UI.form = { error: '', dobError: '' }; // the date of birth is discarded here and never saved
-      if (age < 18) { S.underageAt = new Date().toISOString(); save(); go('underage'); return; }
-      var now = new Date().toISOString();
-      S.ageConfirmedAt = now;
-      S.consents = { terms_version: TERMS_VERSION, privacy_version: PRIVACY_VERSION, accepted_at: now };
-      S.marketing = marketing;
-      save(); go('connect');
+    else if (a === 'start-signup') { UI.signup = el.getAttribute('data-mode'); UI.form = {}; go('account'); }
+    else if (a === 'login-submit') { submitLogin(); }
+    else if (a === 'logout') { var lo = function () { localSignOut(); go('welcome'); toast('Logged out'); }; if (sb) sb.auth.signOut().then(lo, lo); else lo(); }
+    else if (a === 'create-account') { createAccount(); }
+    else if (a === 'finish') {
+      S.onboarded = true; save();
+      if (isLive()) pushProfile({ display_name: displayName(), handle: liveHandle(displayName()), show_amount: S.amount, show_location: S.loc, on_leaderboards: S.board, allow_follows: S.follow });
+      go('rankings'); runSplash(true); toast('Profile saved');
     }
-    else if (a === 'finish') { S.onboarded = true; save(); go('rankings'); runSplash(true); toast('Profile saved'); }
     else if (a === 'save-settings') { save(); go('profile'); toast('Changes saved'); }
     else if (a === 'scope') { UI.scope = el.getAttribute('data-scope'); render(); }
     else if (a === 'feed-tab') { UI.feedTab = el.getAttribute('data-key'); startFeedLoad(); render(); }
@@ -1288,14 +1629,17 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     else if (a === 'show-new') {
       var count = UI.pending.length;
       UI.justAdded = UI.pending.map(function (p) { return p.id; });
-      UI.live = UI.pending.map(function (p) { return Object.assign({}, p, { at: Date.now() }); }).concat(UI.live);
+      var liveNew = UI.pending.filter(function (p) { return p.live; });
+      liveNew.forEach(function (p) { UI.remoteIds[p.id] = true; });
+      UI.remote = liveNew.concat(UI.remote);
+      UI.live = UI.pending.filter(function (p) { return !p.live; }).map(function (p) { return Object.assign({}, p, { at: Date.now() }); }).concat(UI.live);
       UI.pending = [];
       UI.feedTab = 'foryou';
       render();
       window.scrollTo(0, 0);
       var ft = document.getElementById('page-title');
       if (ft) ft.focus({ preventScroll: true });
-      announce(count + ' new post' + (count === 1 ? '' : 's') + ' added to the top of the feed');
+      announce(count + ' new Flex' + (count === 1 ? '' : 'es') + ' added to the top of the feed');
       setTimeout(function () { UI.justAdded = []; }, 900);
     }
     else if (a === 'toggle-link') {
@@ -1308,16 +1652,19 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       var k = el.getAttribute('data-key');
       if (k === 'analytics') { saveConsent(!(C && C.analytics)); }
       else { S[k] = !S[k]; save(); }
+      var col = { board: 'on_leaderboards', follow: 'allow_follows', marketing: 'marketing_email_opt_in' }[k];
+      if (col) { var upd = {}; upd[col] = S[k]; pushProfile(upd); }
+      if (k === 'analytics') pushProfile({ analytics_opt_in: !!(C && C.analytics) });
       if (k === 'marketing') toast(S.marketing ? 'Subscribed to product news' : 'Unsubscribed from product news');
       render();
     }
     else if (a === 'pick-photo') { var inp = document.getElementById(el.getAttribute('data-target')); if (inp) inp.click(); }
-    else if (a === 'remove-photo') { S.photo = null; save(); render(); toast('Photo removed'); }
+    else if (a === 'remove-photo') { S.photo = null; save(); render(); toast('Photo removed'); if (isLive()) { pushProfile({ avatar_path: null }); removeOldPhotos(null); } }
     else if (a === 'cheer') {
       var pid = el.getAttribute('data-id');
       var i = S.cheered.indexOf(pid);
       if (i === -1) S.cheered.push(pid); else S.cheered.splice(i, 1);
-      save(); render();
+      save(); render(); announce(i === -1 ? 'Flexed' : 'Flex removed');
     }
     else if (a === 'compose') { openSheet('compose'); }
     else if (a === 'close-sheet') { closeSheet(); }
@@ -1326,41 +1673,134 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       var body = t ? t.value.trim() : '';
       var msInput = sheetRoot.querySelector('input[name="ms"]:checked');
       var msKey = msInput && msInput.value ? msInput.value : null;
-      if (!body && !msKey) { toast('Write something or pick a milestone first'); if (t) t.focus(); return; }
+      if (!body && !msKey) { toast('Write something or pick a milestone for your Flex'); if (t) t.focus(); return; }
+      if (isLive()) {
+        sb.from('posts').insert({ body: body || null, milestone_code: msKey }).select('id, author_id, milestone_code, body, created_at').single().then(function (r) {
+          if (r.error) { toast(errText(r.error, "Couldn't post your Flex. Check your connection and try again.")); return; }
+          var np = mapLivePost(r.data, {}, []);
+          UI.remote.unshift(np); UI.remoteIds[np.id] = true;
+          UI.sheet = null; UI.opener = null; UI.feedTab = 'foryou'; UI.justAdded = [np.id]; renderSheet();
+          if (current() === 'feed') render(); else go('feed');
+          window.scrollTo(0, 0); toast('You just posted a Flex');
+          setTimeout(function () { UI.justAdded = []; }, 900);
+        });
+        return;
+      }
       S.myPosts.unshift({ id: 'm' + Date.now(), at: Date.now(), body: body || null, milestone: msKey, cheers: 0, replies: 0, reposts: 0 });
       save(); UI.sheet = null; UI.opener = null; UI.feedTab = 'foryou'; UI.justAdded = [S.myPosts[0].id]; renderSheet();
       if (current() === 'feed') render(); else go('feed');
-      window.scrollTo(0, 0); toast('Posted');
+      window.scrollTo(0, 0); toast('You just posted a Flex');
       setTimeout(function () { UI.justAdded = []; }, 900);
     }
     else if (a === 'share-rank') {
       var u = UPDATES[S.loc];
       S.myPosts.unshift({ id: 'm' + Date.now(), at: Date.now(), rankText: 'Climbed ' + u.places + ' places in ' + u.where + ' this month', rank: u.rank, body: null, cheers: 0, replies: 0, reposts: 0 });
-      save(); render(); toast('Shared to your feed');
+      save(); render(); toast('Shared as a Flex');
     }
     else if (a === 'delete-post') {
       var did = el.getAttribute('data-id');
       S.myPosts = S.myPosts.filter(function (p) { return p.id !== did; });
-      save(); render(); toast('Post deleted');
+      save(); render(); toast('Flex deleted');
     }
     else if (a === 'share') { shareLink('A milestone on Wealthy'); }
     else if (a === 'share-profile') { shareLink(displayName() + ' on Wealthy'); }
     else if (a === 'soon') { toast(el.getAttribute('data-msg')); }
-    else if (a === 'download') { downloadData(); }
+    else if (a === 'download') { if (isLive()) sb.rpc('export_my_data').then(function (r) { downloadData(r.error ? null : r.data); }, function () { downloadData(null); }); else downloadData(null); }
     else if (a === 'delete-open') { openSheet('delete'); }
-    else if (a === 'delete-confirm') { UI.sheet = null; UI.opener = null; eraseEverything(); go('deleted'); }
+    else if (a === 'delete-confirm') { UI.sheet = null; UI.opener = null; renderSheet(); if (isLive()) deleteLiveAccount(); else { eraseEverything(); go('deleted'); } }
+    else if (a === 'follow-live') {
+      var fp = findPost(el.getAttribute('data-id'));
+      if (!fp) return;
+      var adding = S.followingIds.indexOf(fp.authorId) === -1;
+      if (adding) S.followingIds.push(fp.authorId); else S.followingIds = S.followingIds.filter(function (x) { return x !== fp.authorId; });
+      save(); render();
+      (adding ? sb.from('follows').insert({ followee_id: fp.authorId }) : sb.from('follows').delete().eq('follower_id', S.me).eq('followee_id', fp.authorId)).then(function (r) {
+        if (r.error) {
+          if (adding) S.followingIds = S.followingIds.filter(function (x) { return x !== fp.authorId; }); else S.followingIds.push(fp.authorId);
+          save(); render(); toast(adding ? "This member isn't accepting followers." : "Couldn't unfollow. Try again.");
+          return;
+        }
+        if (UI.myCounts) UI.myCounts.following_count += adding ? 1 : -1;
+        announce((adding ? 'Following ' : 'Unfollowed ') + fp.name);
+      });
+    }
+    else if (a === 'cheer-live') {
+      var cp = findPost(el.getAttribute('data-id'));
+      if (!cp) return;
+      var on = !cp.cheeredByMe;
+      cp.cheeredByMe = on; cp.cheers += on ? 1 : -1; render(); announce(on ? 'Flexed' : 'Flex removed');
+      (on ? sb.from('cheers').insert({ post_id: cp.dbId }) : sb.from('cheers').delete().eq('post_id', cp.dbId).eq('user_id', S.me)).then(function (r) {
+        if (r.error) { cp.cheeredByMe = !on; cp.cheers += on ? -1 : 1; render(); toast("Couldn't save your Flex. Try again."); }
+      });
+    }
+    else if (a === 'delete-live') {
+      var dp = findPost(el.getAttribute('data-id'));
+      if (!dp) return;
+      sb.from('posts').delete().eq('id', dp.dbId).then(function (r) {
+        if (r.error) { toast("Couldn't delete that Flex. Try again."); return; }
+        UI.remote = UI.remote.filter(function (x) { return x.id !== dp.id; }); delete UI.remoteIds[dp.id];
+        render(); toast('Flex deleted');
+      });
+    }
+    else if (a === 'more') { UI.target = el.getAttribute('data-id'); openSheet('more'); }
+    else if (a === 'report-open') { UI.sheet = 'report'; renderSheet(); }
+    else if (a === 'report-submit') {
+      var rp = findPost(UI.target);
+      var reason = sheetRoot.querySelector('input[name="report-reason"]:checked');
+      if (!reason) { toast("Choose what's wrong with the Flex."); var r0 = sheetRoot.querySelector('input[name="report-reason"]'); if (r0) r0.focus(); return; }
+      var details = ((document.getElementById('report-details') || {}).value || '').trim();
+      var hideIt = function (msg) { if (rp) S.hiddenPosts.push(rp.id); save(); UI.opener = null; closeSheet(); render(); toast(msg); };
+      if (rp && rp.live && isLive()) {
+        sb.from('reports').insert({ target_type: 'post', target_id: rp.dbId, reason: reason.value, details: details || null }).then(function (r) {
+          if (r.error) { toast("Couldn't send your report. Try again."); return; }
+          hideIt('Report sent to the Wealthy team. We\'ve hidden the Flex for you.');
+        });
+      } else {
+        hideIt('This is a sample Flex, so no report was sent. We\'ve hidden it for you.');
+      }
+    }
+    else if (a === 'block') {
+      var bp = findPost(UI.target);
+      var blocked = function (msg) { UI.opener = null; closeSheet(); render(); toast(msg); };
+      if (!bp) { closeSheet(); return; }
+      if (bp.live && isLive()) {
+        sb.from('blocks').insert({ blocked_id: bp.authorId }).then(function (r) {
+          if (r.error) { toast("Couldn't block this member. Try again."); return; }
+          S.blockedNames[bp.authorId] = bp.name;
+          S.followingIds = S.followingIds.filter(function (x) { return x !== bp.authorId; }); save();
+          UI.remote = UI.remote.filter(function (x) { return x.authorId !== bp.authorId; });
+          blocked('Blocked ' + bp.name + '. You won\'t see each other\'s Flexes.');
+        });
+      } else {
+        if (S.hiddenSample.indexOf(bp.handle) === -1) S.hiddenSample.push(bp.handle);
+        S.following = S.following.filter(function (h) { return h !== bp.handle; }); save();
+        blocked('Blocked @' + bp.handle + ' on this device.');
+      }
+    }
+    else if (a === 'unblock') {
+      var uid = el.getAttribute('data-id');
+      sb.from('blocks').delete().eq('blocker_id', S.me).eq('blocked_id', uid).then(function (r) {
+        if (r.error) { toast("Couldn't unblock. Try again."); return; }
+        delete S.blockedNames[uid]; save(); render(); toast('Unblocked');
+      });
+    }
+    else if (a === 'unblock-sample') { var uh = el.getAttribute('data-handle'); S.hiddenSample = S.hiddenSample.filter(function (h) { return h !== uh; }); save(); render(); toast('Unblocked'); }
     else if (a === 'consent') { saveConsent(el.getAttribute('data-value') === 'all'); UI.showConsent = false; renderConsent(); render(); toast('Your choice is saved'); var m = root.querySelector('h1'); if (m) m.focus({ preventScroll: true }); }
     else if (a === 'cookie-settings') { UI.showConsent = true; renderConsent(); var b = consentRoot.querySelector('button'); if (b) b.focus(); }
   });
 
   document.addEventListener('change', function (e) {
     var t = e.target;
-    if (t.matches('[data-group]')) { S[t.getAttribute('data-group')] = t.value; save(); render(); }
+    if (t.matches('[data-group]')) {
+      var grp = t.getAttribute('data-group'); S[grp] = t.value; save(); render();
+      if (grp === 'amount') pushProfile({ show_amount: t.value });
+      if (grp === 'loc') pushProfile({ show_location: t.value });
+    }
     else if (t.matches('[data-photo]') && t.files && t.files[0]) {
-      readPhoto(t.files[0]).then(function (url) { S.photo = url; save(); render(); toast('Photo updated'); },
+      readPhoto(t.files[0]).then(function (url) { if (isLive()) { uploadLivePhoto(url); return; } S.photo = url; save(); render(); toast('Photo updated'); },
         function () { toast("That photo couldn't be opened. Try a JPEG or PNG."); });
     }
-    else if (t.id === 'name-input') { S.name = t.value.slice(0, 50); save(); render(); }
+    else if (t.id === 'name-input') { S.name = t.value.slice(0, 50); save(); render(); if (isLive() && S.name.trim()) pushProfile({ display_name: S.name.trim(), handle: liveHandle(S.name) }); }
   });
   document.addEventListener('input', function (e) {
     var t = e.target;
@@ -1448,6 +1888,8 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   if (C && C.analytics) loadAnalytics();
   render();
   runSplash(false);
+  restoreSession();
+  setInterval(liveTick, 15000);
 })();
 </script>
 </body>
