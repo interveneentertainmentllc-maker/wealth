@@ -279,6 +279,23 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
 .icon-btn--plain { width: 44px; height: 44px; margin-right: -10px; border-color: transparent; color: var(--muted); }
 .icon-btn--plain svg circle { fill: currentColor; stroke: none; }
 .btn--center { align-self: center; }
+.btn--inline { display: inline; min-height: 0; padding: 0; font-size: inherit; vertical-align: baseline; }
+.legal-body { font-size: 15px; line-height: 1.6; color: var(--text-2); overflow-wrap: anywhere; }
+.legal-body h2 { margin: 28px 0 8px; font-size: 19px; font-weight: 600; line-height: 1.3; color: var(--ink); }
+.legal-body h3 { margin: 18px 0 6px; font-size: 15px; font-weight: 700; color: var(--ink); }
+.legal-body p { margin: 0 0 12px; }
+.legal-body ul { margin: 0 0 12px; padding-left: 20px; }
+.legal-body li { margin-bottom: 6px; }
+.legal-body strong { color: var(--ink); }
+.legal-body a { color: var(--ink); font-weight: 600; text-underline-offset: 2px; }
+.legal-body .summary { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 4px 16px 4px; margin-bottom: 14px; }
+.legal-body .summary h2 { margin-top: 14px; }
+.legal-body .notice { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; font-size: 14px; }
+.legal-body .table-wrap { overflow-x: auto; margin: 0 0 14px; border: 1px solid var(--line); border-radius: 12px; }
+.legal-body table { border-collapse: collapse; width: 100%; min-width: 480px; font-size: 13px; }
+.legal-body th, .legal-body td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line-soft); }
+.legal-body th { color: var(--ink); font-weight: 700; }
+.legal-body code { font-size: 12px; }
 .trap { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
 .sheet-options { display: flex; flex-direction: column; border-top: 1px solid var(--line-soft); }
 .sheet-option { min-height: 52px; padding: 0 4px; border: 0; border-bottom: 1px solid var(--line-soft); background: transparent; color: var(--ink); font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; }
@@ -412,6 +429,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   var APP_VERSION = 'Test version 0.3';
   var TERMS_VERSION = '1.1';
   var PRIVACY_VERSION = '1.1';
+  var LEGAL_VERSIONS = { terms: TERMS_VERSION, privacy: PRIVACY_VERSION };
 
   /* ---------- Live test accounts (Supabase) ---------- */
   // The publishable key is meant to be public: row-level security in the database decides what each person can see and change.
@@ -481,7 +499,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   }
   var S = load();
   var C = loadConsent();
-  var UI = { signup: 'demo', busy: false, loginError: '', remote: [], remoteIds: {}, myCounts: null, target: null, scope: 'city', feedTab: 'foryou', feedLoading: false, feedTimer: null, queue: [], pending: [], live: [], justAdded: [], sheet: null, opener: null, last: null, showConsent: false, form: { error: '', dobError: '' } };
+  var UI = { docs: {}, docLoading: null, docFailed: null, needsReaccept: null, reacceptError: '', signup: 'demo', busy: false, loginError: '', remote: [], remoteIds: {}, myCounts: null, target: null, scope: 'city', feedTab: 'foryou', feedLoading: false, feedTimer: null, queue: [], pending: [], live: [], justAdded: [], sheet: null, opener: null, last: null, showConsent: false, form: { error: '', dobError: '' } };
 
   /* ---------- Sample data (clearly labeled in the interface) ---------- */
   var SCOPES = {
@@ -618,10 +636,10 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     { level: 'world', label: 'World', rank: '#1.9M', top: 'Top 7% of members' }
   ];
   var LEGAL = [
-    { href: 'terms.html', label: 'Terms of Service' },
-    { href: 'privacy.html', label: 'Privacy Policy' },
-    { href: 'cookies.html', label: 'Cookie Policy' },
-    { href: 'refunds.html', label: 'Refund Policy' }
+    { key: 'terms', href: 'terms.html', label: 'Terms of Service' },
+    { key: 'privacy', href: 'privacy.html', label: 'Privacy Policy' },
+    { key: 'cookies', href: 'cookies.html', label: 'Cookie Policy' },
+    { key: 'refunds', href: 'refunds.html', label: 'Refund Policy' }
   ];
 
   /* ---------- Icons ---------- */
@@ -748,7 +766,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   }
   function topbar(btn) { return '<header class="topbar"><span class="brand">' + bagSVG(26) + '<span class="wordmark">Wealthy</span></span>' + btn + '</header>'; }
   function legalLinks(cls) {
-    return '<nav class="' + cls + '" aria-label="Legal">' + LEGAL.map(function (l) { return '<a href="' + l.href + '">' + l.label + '</a>'; }).join('') + '<a href="#about">About</a></nav>';
+    return '<nav class="' + cls + '" aria-label="Legal">' + LEGAL.map(function (l) { return '<a href="' + legalHref(l) + '">' + l.label + '</a>'; }).join('') + '<a href="#about">About</a></nav>';
   }
   function memberRow(r, i) {
     var mv = r[4];
@@ -902,7 +920,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
           (isLive() ? '<button class="btn btn--text" data-action="logout">Log out</button>' : '') +
         '</section>' +
         '<section aria-labelledby="h-legal"><h2 class="h2" id="h-legal">Legal</h2><div class="link-list">' +
-          LEGAL.map(function (l) { return '<a href="' + l.href + '">' + l.label + '<span class="chev" aria-hidden="true">' + I.chevron + '</span></a>'; }).join('') +
+          LEGAL.map(function (l) { return '<a href="' + legalHref(l) + '">' + l.label + '<span class="chev" aria-hidden="true">' + I.chevron + '</span></a>'; }).join('') +
           '<a href="#about">About Wealthy<span class="chev" aria-hidden="true">' + I.chevron + '</span></a>' +
           '<a href="#" data-action="cookie-settings">Cookie choices<span class="chev" aria-hidden="true">' + I.chevron + '</span></a>' +
         '</div></section>') +
@@ -927,7 +945,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
         row('App version', APP_VERSION) +
       '</dl>' +
       '<section aria-labelledby="h-about-legal"><h2 class="h2" id="h-about-legal">Policies</h2><div class="link-list">' +
-        LEGAL.map(function (l) { return '<a href="' + l.href + '">' + l.label + '<span class="chev" aria-hidden="true">' + I.chevron + '</span></a>'; }).join('') +
+        LEGAL.map(function (l) { return '<a href="' + legalHref(l) + '">' + l.label + '<span class="chev" aria-hidden="true">' + I.chevron + '</span></a>'; }).join('') +
       '</div></section>' +
       '<p class="small">Wealthy is free: no fees, subscriptions or in-app purchases. It shows estimates for information only, and isn\'t financial, investment, tax or legal advice.</p>' +
       '</section>';
@@ -1200,7 +1218,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     var keepConsent = C;
     try { localStorage.removeItem(KEY); } catch (e) {}
     S = fresh(); C = keepConsent;
-    UI.remote = []; UI.remoteIds = {}; UI.pending = []; UI.myCounts = null; UI.live = []; UI.queue = INCOMING.slice();
+    UI.remote = []; UI.remoteIds = {}; UI.pending = []; UI.myCounts = null; UI.live = []; UI.queue = INCOMING.slice(); UI.needsReaccept = null; UI.reacceptError = ''; UI.docs = {};
   }
   function restoreSession() {
     if (!sb) return;
@@ -1209,7 +1227,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       if (sess) {
         if (S.me && S.me !== sess.user.id) localSignOut();
         S.me = sess.user.id; S.mode = 'live'; save();
-        loadLiveProfile().then(function () { render(); });
+        loadLiveProfile().then(checkConsent).then(function () { render(); });
       } else if (S.mode === 'live') {
         localSignOut(); render();
         toast('You were logged out. Log in to continue.');
@@ -1278,7 +1296,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: LIVE_CFG.key },
       body: JSON.stringify({ email: f.email, password: f.password, display_name: f.name, dob: f.dob, accepted_terms: true,
-        terms_version: TERMS_VERSION, privacy_version: PRIVACY_VERSION, marketing: f.marketing, invite: INVITE, website: f.website || '' })
+        terms_version: LEGAL_VERSIONS.terms, privacy_version: LEGAL_VERSIONS.privacy, marketing: f.marketing, invite: INVITE, website: f.website || '' })
     }).then(function (r) { return r.json(); }).then(function (out) {
       if (!out || !out.ok) {
         UI.busy = false;
@@ -1294,7 +1312,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
         UI.busy = false;
         if (res.error || !res.data || !res.data.session) { UI.form = {}; UI.loginError = 'Your account was created, but logging in failed. Try logging in.'; go('login'); return; }
         S.mode = 'live'; S.me = res.data.user.id; S.name = f.name; S.marketing = f.marketing; S.ageConfirmedAt = now;
-        S.consents = { terms_version: TERMS_VERSION, privacy_version: PRIVACY_VERSION, accepted_at: now };
+        S.consents = { terms_version: LEGAL_VERSIONS.terms, privacy_version: LEGAL_VERSIONS.privacy, accepted_at: now };
         UI.form = {}; save();
         return loadLiveProfile().then(function () { go('connect'); });
       });
@@ -1317,7 +1335,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       localSignOut();
       S.mode = 'live'; S.me = res.data.user.id; S.onboarded = true; UI.form = {};
       save();
-      loadLiveProfile().then(function () { go('rankings'); toast('Welcome back'); });
+      loadLiveProfile().then(checkConsent).then(function () { go('rankings'); if (!UI.needsReaccept) toast('Welcome back'); });
     }, function () {
       UI.busy = false;
       UI.loginError = 'We couldn\'t reach Wealthy\'s servers. Check your connection and try again.';
@@ -1338,6 +1356,89 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       : 'This erases your name, photo, settings, Flexes and privacy choices from this device. In the full app it also disconnects your linked accounts and erases your data from our servers within 30 days. This can\'t be undone.';
   }
   var REPORT_REASONS = [['harassment', 'Harassment or bullying'], ['scam', 'Scam or fraud'], ['impersonation', 'Pretending to be someone else'], ['doxxing', 'Sharing someone\'s private information'], ['false_wealth', 'Fake wealth or ranks'], ['other', 'Something else']];
+
+  /* ---------- Policies from the database, and agreeing to updated versions ---------- */
+  var DOC_TITLES = { terms: 'Terms of Service', privacy: 'Privacy Policy', cookies: 'Cookie Policy', refunds: 'Refund Policy' };
+  function legalHref(l) { return sb ? '#legal-' + l.key : l.href; }
+  function loadLegalVersions() {
+    if (!sb) return;
+    sb.rpc('current_legal_versions').then(function (r) {
+      if (r && r.data && r.data.terms && r.data.privacy) LEGAL_VERSIONS = r.data;
+    }, function () {});
+  }
+  function loadLegalDoc(key) {
+    if (UI.docs[key]) return Promise.resolve(UI.docs[key]);
+    if (!sb) return Promise.resolve(null);
+    return sb.from('legal_documents').select('doc_key, version, title, effective_date, body_html').eq('doc_key', key).eq('is_current', true).maybeSingle().then(function (r) {
+      if (r.error || !r.data) return null;
+      UI.docs[key] = r.data;
+      return r.data;
+    }, function () { return null; });
+  }
+  function fillBiz(html) {
+    return html.replace(/<(span|a)\b([^>]*?)\sdata-biz="(\w+)"([^>]*)>[^<]*<\/\1>/g, function (m, tag, pre, key, post) {
+      var v = BUSINESS[key];
+      if (!v) return m;
+      var attrs = (pre + post).replace(/^\s+|\s+$/g, '');
+      if (tag === 'a' && v.charAt(0) !== '[') attrs = attrs.replace(/href="[^"]*"/, 'href="mailto:' + esc(v) + '"');
+      return '<' + tag + ' data-biz="' + key + '"' + (attrs ? ' ' + attrs : '') + '>' + esc(v) + '</' + tag + '>';
+    });
+  }
+  function inAppLinks(html) {
+    return html
+      .replace(/href="(terms|privacy|cookies|refunds)\.html(#[^"]*)?"/g, 'href="#legal-$1"')
+      .replace(/href="(https:\/\/[^"]+)"/g, 'href="$1" target="_blank" rel="noopener"');
+  }
+  function legalView(key) {
+    var d = UI.docs[key];
+    var back = UI.needsReaccept && isLive() ? '#reaccept' : (S.onboarded ? '#settings' : '#welcome');
+    var head = '<div class="step-head"><a class="icon-btn" href="' + back + '" aria-label="Back">' + I.back + '</a></div>';
+    if (!d) {
+      if (UI.docLoading !== key) {
+        UI.docLoading = key;
+        loadLegalDoc(key).then(function (doc) {
+          UI.docLoading = null;
+          UI.docFailed = doc ? null : key;
+          if (current() === 'legal-' + key) render();
+        });
+      }
+      return '<section class="screen">' + head + '<h1 class="h-xl" tabindex="-1">' + DOC_TITLES[key] + '</h1>' +
+        (UI.docFailed === key
+          ? '<p class="lede">This couldn\'t load right now. <a class="inline-link" href="' + key + '.html">Open the ' + DOC_TITLES[key] + ' page</a> instead.</p>'
+          : '<p class="lede" role="status">Loading…</p>') + '</section>';
+    }
+    return '<section class="screen">' + head +
+      '<div class="stack-sm"><h1 class="h-xl" tabindex="-1">' + esc(d.title) + '</h1>' +
+      '<p class="small">Version ' + esc(d.version) + (d.effective_date ? ' · Effective ' + esc(d.effective_date) : '') + '</p></div>' +
+      '<div class="legal-body">' + inAppLinks(fillBiz(d.body_html)) + '</div></section>';
+  }
+  function checkConsent() {
+    if (!isLive()) return Promise.resolve();
+    return sb.rpc('my_consent_status').then(function (r) {
+      UI.needsReaccept = r && r.data && r.data.needs_reaccept ? r.data : null;
+      if (UI.needsReaccept) (UI.needsReaccept.changed || []).forEach(function (k) { delete UI.docs[k]; });
+    }, function () {});
+  }
+  function reaccept() {
+    var c = UI.needsReaccept || { changed: [], current: {} };
+    var changed = c.changed || [];
+    var title = changed.length === 1 ? DOC_TITLES[changed[0]] : 'Terms of Service and Privacy Policy';
+    var rows = changed.map(function (k) {
+      return '<a href="#legal-' + k + '">' + DOC_TITLES[k] + ', version ' + esc(c.current[k] || '') + '<span class="chev" aria-hidden="true">' + I.chevron + '</span></a>';
+    }).join('');
+    var agree = [];
+    if (changed.indexOf('terms') !== -1) agree.push('I agree to the updated Terms of Service, including resolving disputes by individual arbitration');
+    if (changed.indexOf('privacy') !== -1) agree.push((agree.length ? 'and ' : 'I ') + 'have read the updated Privacy Policy');
+    return '<section class="screen has-dock">' +
+      '<div class="stack-sm"><h1 class="h-xl" tabindex="-1">We\'ve updated our ' + esc(title) + '.</h1>' +
+      '<p class="lede">Please read the new version and agree to keep using Wealthy.</p></div>' +
+      '<div class="link-list">' + rows + '</div>' +
+      (UI.reacceptError ? '<p class="error" id="reaccept-error" role="alert">' + esc(UI.reacceptError) + '</p>' : '') +
+      '<label class="check"><input type="checkbox" id="reaccept-check"' + (UI.reacceptError ? ' aria-invalid="true" aria-describedby="reaccept-error"' : '') + '><span>' + agree.join(' ') + '.</span></label>' +
+      '<p class="small">Don\'t agree? You can <button class="btn btn--text btn--inline" data-action="logout">log out</button> or <button class="btn btn--text btn--inline" data-action="delete-open">delete your account</button>.</p>' +
+      '</section>' +
+      '<div class="dock"><button class="btn btn--primary" data-action="reaccept-submit">Agree and continue</button></div>';
+  }
 
   function wealth() {
     var bar = MIX.map(function (m) { return '<span style="flex:' + m.w + ' 1 0;background:var(' + m.c + ')"></span>'; }).join('');
@@ -1462,10 +1563,12 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     add: function () { return connectView('add'); },
     privacy: function () { return privacyView('onboarding'); },
     settings: function () { return privacyView('settings'); },
-    about: about, deleted: deleted,
+    about: about, deleted: deleted, reaccept: reaccept,
+    'legal-terms': function () { return legalView('terms'); }, 'legal-privacy': function () { return legalView('privacy'); },
+    'legal-cookies': function () { return legalView('cookies'); }, 'legal-refunds': function () { return legalView('refunds'); },
     rankings: rankings, feed: feed, wealth: wealth, profile: profile
   };
-  var TITLES = { login: 'Log in · Wealthy', welcome: 'Wealthy', account: 'Create your account · Wealthy', underage: 'Adults only · Wealthy', connect: 'Add what you own · Wealthy', add: 'Add what you own · Wealthy', privacy: 'How you appear · Wealthy', settings: 'Settings · Wealthy', about: 'About · Wealthy', deleted: 'Data deleted · Wealthy', rankings: 'Rankings · Wealthy', feed: 'Feed · Wealthy', wealth: 'Your wealth · Wealthy', profile: 'Profile · Wealthy' };
+  var TITLES = { reaccept: 'Updated policies · Wealthy', 'legal-terms': 'Terms of Service · Wealthy', 'legal-privacy': 'Privacy Policy · Wealthy', 'legal-cookies': 'Cookie Policy · Wealthy', 'legal-refunds': 'Refund Policy · Wealthy', login: 'Log in · Wealthy', welcome: 'Wealthy', account: 'Create your account · Wealthy', underage: 'Adults only · Wealthy', connect: 'Add what you own · Wealthy', add: 'Add what you own · Wealthy', privacy: 'How you appear · Wealthy', settings: 'Settings · Wealthy', about: 'About · Wealthy', deleted: 'Data deleted · Wealthy', rankings: 'Rankings · Wealthy', feed: 'Feed · Wealthy', wealth: 'Your wealth · Wealthy', profile: 'Profile · Wealthy' };
   var TABS = ['rankings', 'feed', 'wealth', 'profile'];
   var MEMBER_ONLY = ['rankings', 'feed', 'wealth', 'profile', 'settings', 'add'];
   var NEEDS_CONSENT = ['connect', 'privacy'];
@@ -1478,6 +1581,9 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   function current() {
     var h = decodeURIComponent(location.hash.slice(1));
     if (h === 'about' || h === 'deleted') return h;
+    if (h.indexOf('legal-') === 0 && Object.prototype.hasOwnProperty.call(VIEWS, h)) return h;
+    if (isLive() && UI.needsReaccept && S.onboarded) return 'reaccept';
+    if (h === 'reaccept') return S.onboarded ? 'rankings' : 'welcome';
     if (S.underageAt && !S.onboarded) return 'underage';
     if (h === 'login') return S.onboarded ? 'rankings' : 'login';
     if (!Object.prototype.hasOwnProperty.call(VIEWS, h)) return S.onboarded ? 'rankings' : 'welcome';
@@ -1590,7 +1696,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   function eraseEverything() {
     try { localStorage.removeItem(KEY); localStorage.removeItem(CONSENT_KEY); } catch (e) {}
     S = fresh(); C = null;
-    UI.remote = []; UI.remoteIds = {}; UI.myCounts = null; UI.signup = 'demo';
+    UI.remote = []; UI.remoteIds = {}; UI.myCounts = null; UI.signup = 'demo'; UI.needsReaccept = null;
     UI.scope = 'city'; UI.feedTab = 'foryou'; UI.live = []; UI.pending = []; UI.queue = INCOMING.slice(); UI.form = { error: '', dobError: '' }; UI.showConsent = false;
   }
 
@@ -1603,6 +1709,17 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     if (el.tagName === 'A') e.preventDefault();
 
     if (a === 'skip') { var h1 = root.querySelector('h1'); if (h1) h1.focus(); }
+    else if (a === 'reaccept-submit') {
+      var rc = document.getElementById('reaccept-check');
+      if (!rc || !rc.checked) { UI.reacceptError = 'Tick the box to agree, or log out.'; render(); var rcb = document.getElementById('reaccept-check'); if (rcb) rcb.focus(); return; }
+      sb.rpc('accept_current_terms').then(function (r) {
+        if (r.error) { toast("Couldn't save that. Check your connection and try again."); return; }
+        var cur = UI.needsReaccept ? UI.needsReaccept.current : LEGAL_VERSIONS;
+        S.consents = { terms_version: cur.terms, privacy_version: cur.privacy, accepted_at: new Date().toISOString() };
+        UI.needsReaccept = null; UI.reacceptError = ''; save();
+        go('rankings'); toast("Thanks. You're up to date.");
+      });
+    }
     else if (a === 'start-signup') { UI.signup = el.getAttribute('data-mode'); UI.form = {}; go('account'); }
     else if (a === 'login-submit') { submitLogin(); }
     else if (a === 'logout') { var lo = function () { localSignOut(); go('welcome'); toast('Logged out'); }; if (sb) sb.auth.signOut().then(lo, lo); else lo(); }
@@ -1707,7 +1824,14 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     else if (a === 'share') { shareLink('A milestone on Wealthy'); }
     else if (a === 'share-profile') { shareLink(displayName() + ' on Wealthy'); }
     else if (a === 'soon') { toast(el.getAttribute('data-msg')); }
-    else if (a === 'download') { if (isLive()) sb.rpc('export_my_data').then(function (r) { downloadData(r.error ? null : r.data); }, function () { downloadData(null); }); else downloadData(null); }
+    else if (a === 'download') {
+      if (!isLive()) { downloadData(null); return; }
+      Promise.all([sb.rpc('export_my_data'), sb.from('consent_events').select('doc_key, version, method, accepted_at').eq('user_id', S.me)]).then(function (res) {
+        var server = res[0].error ? null : (res[0].data || {});
+        if (server) server.agreement_history = res[1].data || [];
+        downloadData(server);
+      }, function () { downloadData(null); });
+    }
     else if (a === 'delete-open') { openSheet('delete'); }
     else if (a === 'delete-confirm') { UI.sheet = null; UI.opener = null; renderSheet(); if (isLive()) deleteLiveAccount(); else { eraseEverything(); go('deleted'); } }
     else if (a === 'follow-live') {
@@ -1890,6 +2014,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   if (C && C.analytics) loadAnalytics();
   render();
   runSplash(false);
+  loadLegalVersions();
   restoreSession();
   setInterval(liveTick, 15000);
 })();
