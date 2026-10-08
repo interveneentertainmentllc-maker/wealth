@@ -279,6 +279,18 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
 .icon-btn--plain { width: 44px; height: 44px; margin-right: -10px; border-color: transparent; color: var(--muted); }
 .icon-btn--plain svg circle { fill: currentColor; stroke: none; }
 .btn--center { align-self: center; }
+.boost-btn { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-size: 13px; font-weight: 700; cursor: pointer; }
+.boost-btn svg { width: 15px; height: 15px; }
+.boost-label { align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px 3px 7px; border-radius: 999px; background: var(--ink); color: var(--on-ink); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.boost-label svg { width: 13px; height: 13px; }
+.post--boosted { box-shadow: inset 3px 0 0 var(--accent); }
+.stepper-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.stepper-val { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.boost-total { display: flex; justify-content: space-between; align-items: baseline; padding-top: 12px; border-top: 1px solid var(--line); font-size: 15px; font-weight: 600; }
+.boost-total strong { font-size: 28px; font-variant-numeric: tabular-nums; }
+.note-line { margin: 0; font-size: 13px; color: var(--muted); }
+.icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn--inline { display: inline; min-height: 0; padding: 0; font-size: inherit; vertical-align: baseline; }
 .legal-body { font-size: 15px; line-height: 1.6; color: var(--text-2); overflow-wrap: anywhere; }
 .legal-body h2 { margin: 28px 0 8px; font-size: 19px; font-weight: 600; line-height: 1.3; color: var(--ink); }
@@ -459,6 +471,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     amount: 'range', loc: 'state', board: false, follow: true, marketing: false,
     linked: { bank: false, invest: false, home: false, car: false, crypto: false, debts: false, other: false },
     cheered: [], reposted: [], following: [], myPosts: [],
+    boosts: [],
     mode: 'demo', me: null, handle: null, joinedAt: null, followingIds: [], hiddenSample: [], hiddenPosts: [], blockedNames: {}
   };
   function fresh() { return JSON.parse(JSON.stringify(DEFAULTS)); }
@@ -470,7 +483,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       s.linked = Object.assign(fresh().linked, s.linked || {});
       if (!Array.isArray(s.cheered)) s.cheered = [];
       if (!Array.isArray(s.myPosts)) s.myPosts = [];
-      ['reposted', 'following', 'followingIds', 'hiddenSample', 'hiddenPosts'].forEach(function (k) { if (!Array.isArray(s[k])) s[k] = []; });
+      ['reposted', 'following', 'followingIds', 'hiddenSample', 'hiddenPosts', 'boosts'].forEach(function (k) { if (!Array.isArray(s[k])) s[k] = []; });
       if (!s.blockedNames || typeof s.blockedNames !== 'object') s.blockedNames = {};
       s.myPosts = s.myPosts.filter(function (p) { return !p.milestone || typeof p.milestone === 'string'; });
       return s;
@@ -499,7 +512,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   }
   var S = load();
   var C = loadConsent();
-  var UI = { docs: {}, docLoading: null, docFailed: null, needsReaccept: null, reacceptError: '', signup: 'demo', busy: false, loginError: '', remote: [], remoteIds: {}, myCounts: null, target: null, scope: 'city', feedTab: 'foryou', feedLoading: false, feedTimer: null, queue: [], pending: [], live: [], justAdded: [], sheet: null, opener: null, last: null, showConsent: false, form: { error: '', dobError: '' } };
+  var UI = { liveBoosts: {}, boostHours: 1, boostError: '', boostBlocked: false, docs: {}, docLoading: null, docFailed: null, needsReaccept: null, reacceptError: '', signup: 'demo', busy: false, loginError: '', remote: [], remoteIds: {}, myCounts: null, target: null, scope: 'city', feedTab: 'foryou', feedLoading: false, feedTimer: null, queue: [], pending: [], live: [], justAdded: [], sheet: null, opener: null, last: null, showConsent: false, form: { error: '', dobError: '' } };
 
   /* ---------- Sample data (clearly labeled in the interface) ---------- */
   var SCOPES = {
@@ -670,6 +683,9 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     building: svg('<path d="M6 21V4h12v17M3 21h18M9 8h2M13 8h2M9 12h2M13 12h2M10 21v-4h4v4"/>'),
     piggy: svg('<path d="M5 11c0-3.3 3.1-6 7-6s7 2.7 7 6c0 2-1.1 3.7-2.8 4.8V19h-2.5l-.5-2h-3.4l-.5 2H7.8v-3.2C6.1 14.7 5 13 5 11z"/><path d="M19 10h2M10 7.5h4"/>'),
     podium: svg('<path d="M3 20h18M4 20v-6h5v6M9 20V9h6v11M15 20v-8h5v8M12 3l1 2 2 .3-1.5 1.4.4 2.1-1.9-1-1.9 1 .4-2.1L9 5.3 11 5z"/>'),
+    boost: svg('<path d="M12 19V6M6 11l6-6 6 6"/>'),
+    plus: svg('<path d="M12 5v14M5 12h14"/>'),
+    minus: svg('<path d="M5 12h14"/>'),
     dots: svg('<circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>'),
     repost: svg('<path d="M7 7h11l-3-3M17 17H6l3 3M18 7v5M6 17v-5"/>', 18),
     bagIcon: svg('<path d="M9 3h6l-1.5 3.5h-3zM10 6.5C6 8.5 4 12 4 15c0 3.5 3 5 8 5s8-1.5 8-5c0-3-2-6.5-6-8.5"/><path d="M14 11.2c-.5-.6-1.2-.9-2-.9-1.2 0-2 .6-2 1.5 0 2 4.1 1.1 4.1 3.2 0 .9-.9 1.5-2.1 1.5-.9 0-1.7-.4-2.2-1M12 9.4v.9M12 16.5v.9"/>'),
@@ -993,7 +1009,9 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       if (UI.feedTab === 'milestones') return !!p.milestone;
       if (UI.feedTab === 'near') return p.mine || p.live || nearYou(p.place);
       return true;
-    });
+    }).map(function (p, i) { return { p: p, i: i, b: UI.feedTab === 'foryou' && activeBoost(p) ? 0 : 1 }; })
+      .sort(function (a, b) { return a.b - b.b || a.i - b.i; })
+      .map(function (x) { return x.p; });
   }
   function artFigure(key) {
     var m = MILESTONES[key];
@@ -1021,15 +1039,19 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       : '<button class="follow-btn" data-action="' + (p.live ? 'follow-live' : 'follow') + '" data-id="' + esc(p.id) + '" data-handle="' + esc(p.handle) + '" aria-pressed="' + following + '" aria-label="' + (following ? 'Following ' : 'Follow ') + esc(name) + '">' + (following ? 'Following' : 'Follow') + '</button>' +
         '<button class="icon-btn icon-btn--plain" data-action="more" data-id="' + esc(p.id) + '" aria-label="Report or block, Flex by ' + esc(name) + '">' + I.dots + '</button>';
     var tag = p.live ? (mine ? 'Your Flex · Live test' : 'Live test account') : (mine ? esc(myWhere()) : esc(p.where) + ' · Sample Flex');
-    var pop = UI.justAdded.indexOf(p.id) !== -1 ? ' pop' : '';
-    return '<article class="post' + pop + '" aria-label="' + esc((mine ? 'Your Flex' : (p.live ? 'Flex by ' : 'Sample Flex by ') + name) + (msLabel ? ', ' + msLabel : '')) + '">' +
+    var boost = activeBoost(p);
+    if (boost) tag += mine ? ' · Boosted until ' + boostTime(boost.endsAt) : ' · Paid promotion';
+    var pop = (UI.justAdded.indexOf(p.id) !== -1 ? ' pop' : '') + (boost ? ' post--boosted' : '');
+    return '<article class="post' + pop + '" aria-label="' + esc((boost ? 'Boosted, ' : '') + (mine ? 'Your Flex' : (p.live ? 'Flex by ' : 'Sample Flex by ') + name) + (msLabel ? ', ' + msLabel : '')) + '">' +
       avatarHTML(ini, photo, 44) +
       '<div class="post-main">' +
         '<div class="post-head"><div class="who"><div class="name-line"><span class="name">' + esc(name) + '</span>' + (mine || p.live ? '' : VERIFIED) + '</div><span class="handle">@' + esc(handle) + ' · ' + esc(time) + '</span></div>' + headBtn + '</div>' +
+        (boost ? '<span class="boost-label">' + I.boost + 'Boosted</span>' : '') +
         badge +
         (p.body ? '<p class="post-body">' + esc(p.body) + '</p>' : '') +
         (ms ? artFigure(p.milestone) : '') +
         '<span class="sample-tag">' + tag + '</span>' +
+        (mine && !boost ? '<button class="boost-btn" data-action="boost-open" data-id="' + esc(p.id) + '">' + I.boost + 'Boost this Flex</button>' : '') +
         '<div class="actions">' +
           '<button class="act" data-action="reply" data-id="' + esc(p.id) + '" aria-label="Reply, ' + fmtCount(replies) + ' replies">' + I.comment + '<span aria-hidden="true">' + fmtCount(replies) + '</span></button>' +
           '<button class="act act--repost" data-action="repost" data-id="' + esc(p.id) + '" aria-pressed="' + reposted + '" aria-label="Repost, ' + fmtCount(reposts) + ' reposts">' + I.repost + '<span aria-hidden="true">' + fmtCount(reposts) + '</span></button>' +
@@ -1083,7 +1105,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     UI.feedLoading = true;
     clearTimeout(UI.feedTimer);
     var wait = new Promise(function (res) { UI.feedTimer = setTimeout(res, reducedMotion() ? 250 : 800); });
-    Promise.all([wait, loadLiveFeed()]).then(function () {
+    Promise.all([wait, loadLiveFeed(), loadLiveBoosts()]).then(function () {
       UI.feedLoading = false;
       if (current() === 'feed') render();
     });
@@ -1440,6 +1462,61 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       '<div class="dock"><button class="btn btn--primary" data-action="reaccept-submit">Agree and continue</button></div>';
   }
 
+  /* ---------- Boosts ($100 an hour, 1 to 24 hours, one every 30 days) ---------- */
+  var BOOST_PRICE = 100, BOOST_MAX_HOURS = 24, BOOST_DAYS = 30;
+  function activeBoost(p) {
+    if (p.live) {
+      var e = UI.liveBoosts[p.dbId];
+      return e && Date.parse(e) > Date.now() ? { endsAt: Date.parse(e) } : null;
+    }
+    var b = S.boosts.filter(function (x) { return x.postId === p.id && x.endsAt > Date.now(); })[0];
+    return b || null;
+  }
+  function demoBoostBlockedUntil() {
+    var last = S.boosts.reduce(function (m, b) { return Math.max(m, b.paidAt); }, 0);
+    var until = last + BOOST_DAYS * 864e5;
+    return last && until > Date.now() ? until : null;
+  }
+  function boostTime(ms) {
+    var d = new Date(ms), now = new Date();
+    var t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return d.toDateString() === now.toDateString() ? t : d.toLocaleDateString([], { weekday: 'short' }) + ' ' + t;
+  }
+  function boostDate(ms) { return new Date(ms).toLocaleDateString([], { month: 'long', day: 'numeric' }); }
+  function loadLiveBoosts() {
+    if (!isLive()) return Promise.resolve();
+    return sb.rpc('current_boosts').then(function (r) {
+      var map = {};
+      (r && r.data || []).forEach(function (b) { map[b.post_id] = b.ends_at; });
+      UI.liveBoosts = map;
+    }, function () {});
+  }
+  function boostSheet() {
+    var h = UI.boostHours, total = h * BOOST_PRICE;
+    var chips = [1, 6, 12, 24].map(function (n) {
+      return '<button class="chip-btn" data-action="boost-hours" data-hours="' + n + '" aria-pressed="' + (h === n) + '">' + n + (n === 1 ? ' hour' : ' hours') + '</button>';
+    }).join('');
+    var blocked = !!UI.boostBlocked;
+    return '<div class="sheet-backdrop" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" aria-describedby="boost-desc">' +
+      '<h2 class="h2" id="sheet-title">Boost your Flex</h2>' +
+      '<p class="lede" id="boost-desc">Boosted Flexes show at the top of everyone\'s For you feed, labeled "Boosted," for as long as you choose.</p>' +
+      '<div class="stack-sm"><span class="small" id="boost-hours-label">How long</span>' +
+        '<div class="stepper-row" role="group" aria-labelledby="boost-hours-label">' +
+          '<button class="icon-btn" data-action="boost-less" aria-label="One hour less"' + (h <= 1 || blocked ? ' disabled' : '') + '>' + I.minus + '</button>' +
+          '<output class="stepper-val" id="boost-hours-val" aria-live="polite">' + h + (h === 1 ? ' hour' : ' hours') + '</output>' +
+          '<button class="icon-btn" data-action="boost-more" aria-label="One hour more"' + (h >= BOOST_MAX_HOURS || blocked ? ' disabled' : '') + '>' + I.plus + '</button>' +
+        '</div>' +
+        '<div class="chips-row">' + chips + '</div>' +
+      '</div>' +
+      '<div class="boost-total"><span>Total</span><strong>$' + total.toLocaleString() + '</strong></div>' +
+      '<p class="small">$' + BOOST_PRICE + ' an hour, up to ' + BOOST_MAX_HOURS + ' hours. You can boost one Flex every ' + BOOST_DAYS + ' days. The Boost starts as soon as payment goes through.</p>' +
+      (UI.boostError ? '<p class="error" role="alert">' + esc(UI.boostError) + '</p>' : '') +
+      (!isLive() ? '<p class="note-line"><strong>Test version:</strong> no payment is taken.</p>' : '') +
+      '<div class="sheet-btns"><button class="btn btn--outline btn--sm" data-action="close-sheet">Cancel</button>' +
+      '<button class="btn btn--primary btn--sm" data-action="boost-pay"' + (blocked ? ' disabled' : '') + '>' + (isLive() ? 'Continue to payment' : 'Boost (test)') + '</button></div>' +
+      '</div></div>';
+  }
+
   function wealth() {
     var bar = MIX.map(function (m) { return '<span style="flex:' + m.w + ' 1 0;background:var(' + m.c + ')"></span>'; }).join('');
     var legend = MIX.map(function (m) { return '<li class="legend-item"><span class="swatch" aria-hidden="true" style="background:var(' + m.c + ')"></span><span>' + m.label + '</span><span class="small push">' + m.pct + '</span></li>'; }).join('');
@@ -1490,6 +1567,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
         '<div class="sheet-foot"><span class="small" id="compose-count">0 of 500 characters</span><button class="btn btn--primary btn--sm" data-action="post">Post Flex</button></div>' +
         '</div></div>';
     }
+    if (UI.sheet === 'boost') return boostSheet();
     if (UI.sheet === 'more') {
       var mp = findPost(UI.target) || {};
       return '<div class="sheet-backdrop" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">' +
@@ -1538,7 +1616,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     sheetRoot.innerHTML = sheetHTML();
     if (UI.sheet) {
       setTimeout(function () {
-        var first = sheetRoot.querySelector({ compose: '#compose-text', more: '.sheet-option', report: 'input[name="report-reason"]' }[UI.sheet] || '[data-action="close-sheet"].btn');
+        var first = sheetRoot.querySelector({ compose: '#compose-text', more: '.sheet-option', report: 'input[name="report-reason"]', boost: '[data-action="boost-pay"]:not([disabled]), [data-action="close-sheet"].btn' }[UI.sheet] || '[data-action="close-sheet"].btn');
         if (first) first.focus();
       }, 50);
     }
@@ -1709,6 +1787,52 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     if (el.tagName === 'A') e.preventDefault();
 
     if (a === 'skip') { var h1 = root.querySelector('h1'); if (h1) h1.focus(); }
+    else if (a === 'boost-open') {
+      var bpo = findPost(el.getAttribute('data-id'));
+      if (!bpo) return;
+      UI.target = bpo.id; UI.boostHours = UI.boostHours || 1; UI.boostError = ''; UI.boostBlocked = false;
+      if (!isLive()) {
+        var until = demoBoostBlockedUntil();
+        if (until) { UI.boostBlocked = true; UI.boostError = 'You can boost one Flex every ' + BOOST_DAYS + ' days. Your next Boost is available ' + boostDate(until) + '.'; }
+        openSheet('boost');
+      } else {
+        openSheet('boost');
+        sb.rpc('boost_quote', { p_post: bpo.dbId, p_hours: UI.boostHours }).then(function (r) {
+          var q = r && r.data;
+          if (q && q.eligible === false && q.next_eligible_at) { UI.boostBlocked = true; UI.boostError = q.reason + ' Your next Boost is available ' + boostDate(Date.parse(q.next_eligible_at)) + '.'; renderSheet(); }
+        }, function () {});
+      }
+    }
+    else if (a === 'boost-less' || a === 'boost-more' || a === 'boost-hours') {
+      UI.boostHours = a === 'boost-hours' ? parseInt(el.getAttribute('data-hours'), 10) : Math.min(BOOST_MAX_HOURS, Math.max(1, UI.boostHours + (a === 'boost-more' ? 1 : -1)));
+      if (!UI.boostBlocked) UI.boostError = '';
+      sheetRoot.innerHTML = sheetHTML();
+      var keep = sheetRoot.querySelector(a === 'boost-hours' ? '[data-action="boost-hours"][data-hours="' + UI.boostHours + '"]' : '[data-action="' + a + '"]:not([disabled])') || sheetRoot.querySelector('#boost-hours-val');
+      if (keep && keep.focus) keep.focus();
+    }
+    else if (a === 'boost-pay') {
+      var bp2 = findPost(UI.target);
+      if (!bp2) { closeSheet(); return; }
+      var hours = UI.boostHours;
+      if (!isLive()) {
+        if (demoBoostBlockedUntil()) return;
+        var now = Date.now();
+        S.boosts.push({ postId: bp2.id, hours: hours, amount: hours * BOOST_PRICE, paidAt: now, startsAt: now, endsAt: now + hours * 3600e3 });
+        save(); UI.opener = null; closeSheet(); UI.feedTab = 'foryou';
+        if (current() === 'feed') render(); else go('feed');
+        root.scrollTo(0, 0);
+        toast('Your Flex is boosted until ' + boostTime(now + hours * 3600e3));
+        return;
+      }
+      el.disabled = true;
+      sb.rpc('boost_quote', { p_post: bp2.dbId, p_hours: hours }).then(function (r) {
+        var q = r && r.data;
+        if (r.error || !q) UI.boostError = "Couldn't check that. Check your connection and try again.";
+        else if (!q.eligible) { UI.boostError = q.reason + (q.next_eligible_at ? ' Your next Boost is available ' + boostDate(Date.parse(q.next_eligible_at)) + '.' : ''); UI.boostBlocked = !!q.next_eligible_at; }
+        else UI.boostError = "You're eligible, but payments aren't switched on yet. Once they are, this opens Stripe's secure checkout for $" + (q.amount_cents / 100).toLocaleString() + '.';
+        renderSheet();
+      }, function () { UI.boostError = "Couldn't check that. Check your connection and try again."; renderSheet(); });
+    }
     else if (a === 'reaccept-submit') {
       var rc = document.getElementById('reaccept-check');
       if (!rc || !rc.checked) { UI.reacceptError = 'Tick the box to agree, or log out.'; render(); var rcb = document.getElementById('reaccept-check'); if (rcb) rcb.focus(); return; }
