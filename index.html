@@ -76,8 +76,8 @@
 }
 *, *::before, *::after { box-sizing: inherit; }
 [hidden] { display: none !important; }
-html { height: 100%; background: var(--ground); scroll-padding-top: env(safe-area-inset-top, 0px); -webkit-text-size-adjust: 100%; }
-body { margin: 0; height: 100%; background: var(--ground); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.4; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
+html { height: 100%; overflow: hidden; overscroll-behavior: none; background: var(--ground); -webkit-text-size-adjust: 100%; }
+body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; background: var(--ground); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.4; -webkit-font-smoothing: antialiased; -webkit-tap-highlight-color: transparent; }
 button, input, textarea { font-family: inherit; }
 a { color: inherit; }
 img { max-width: 100%; }
@@ -89,7 +89,7 @@ h1:focus, h1:focus-visible { outline: none; }
 .skip-link:focus { top: calc(8px + env(safe-area-inset-top, 0px)); }
 
 /* Layout */
-.app { display: block; max-width: 440px; min-height: 100%; margin: 0 auto; }
+.app { display: block; max-width: 440px; height: 100%; margin: 0 auto; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; overscroll-behavior-y: contain; scroll-padding-top: 12px; }
 .screen { padding: 16px 20px 32px; display: flex; flex-direction: column; gap: 22px; }
 .screen.has-tabs { padding-bottom: calc(104px + env(safe-area-inset-bottom, 0px)); }
 .screen.has-dock { padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
@@ -279,6 +279,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
 .icon-btn--plain { width: 44px; height: 44px; margin-right: -10px; border-color: transparent; color: var(--muted); }
 .icon-btn--plain svg circle { fill: currentColor; stroke: none; }
 .btn--center { align-self: center; }
+.trap { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
 .sheet-options { display: flex; flex-direction: column; border-top: 1px solid var(--line-soft); }
 .sheet-option { min-height: 52px; padding: 0 4px; border: 0; border-bottom: 1px solid var(--line-soft); background: transparent; color: var(--ink); font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; }
 .sheet-option--danger { color: var(--error); }
@@ -817,7 +818,8 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     var liveFields = !live ? '' :
       '<div class="field"><label for="su-name">Display name</label><input class="input" id="su-name" type="text" maxlength="50" autocomplete="nickname" value="' + esc(f.name || '') + '"' + fieldAria('su-name', f.nameError) + '><span class="small" id="su-name-hint">Other testers see this on your Flexes. It doesn\'t have to be your legal name.</span>' + fieldError('su-name', f.nameError) + '</div>' +
       '<div class="field"><label for="su-email">Email</label><input class="input" id="su-email" type="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" value="' + esc(f.email || '') + '"' + fieldAria('su-email', f.emailError) + '><span class="small" id="su-email-hint">You\'ll use it to log in. Other members never see it.</span>' + fieldError('su-email', f.emailError) + '</div>' +
-      '<div class="field"><label for="su-password">Password</label><input class="input" id="su-password" type="password" autocomplete="new-password" maxlength="72" value="' + esc(f.password || '') + '"' + fieldAria('su-password', f.passwordError) + '><span class="small" id="su-password-hint">At least 8 characters.</span>' + fieldError('su-password', f.passwordError) + '</div>';
+      '<div class="field"><label for="su-password">Password</label><input class="input" id="su-password" type="password" autocomplete="new-password" maxlength="72" value="' + esc(f.password || '') + '"' + fieldAria('su-password', f.passwordError) + '><span class="small" id="su-password-hint">At least 8 characters.</span>' + fieldError('su-password', f.passwordError) + '</div>' +
+      '<div class="trap" aria-hidden="true"><label for="su-website">Website</label><input id="su-website" type="text" tabindex="-1" autocomplete="off"></div>';
     return '<section class="screen has-dock">' + stepHeader('welcome', 1) + demoBar() +
       '<div class="stack-sm"><h1 class="h-xl" tabindex="-1">' + (live ? 'Create your test account.' : 'Explore the demo.') + '</h1><p class="lede">' +
         (live ? 'Other testers will see your display name, photo and Flexes. Wealthy is for adults 18 and over; we check your date of birth once and don\'t keep it.'
@@ -1090,7 +1092,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   }
   function errText(err, fallback) {
     var m = err && err.message ? String(err.message) : '';
-    return /can't include|isn't allowed|reserved/i.test(m) ? m : fallback;
+    return /can't include|isn't allowed|reserved|slow down/i.test(m) ? m : fallback;
   }
   var pushQueue = {}, pushTimer = null;
   function pushProfile(fields) {
@@ -1243,7 +1245,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   function readSignupForm() {
     var v = function (id) { var el = document.getElementById(id); return el ? el.value : ''; };
     var c = function (id) { var el = document.getElementById(id); return !!(el && el.checked); };
-    return { dob: v('dob'), terms: c('agree-terms'), marketing: c('agree-marketing'), name: v('su-name').trim().slice(0, 50), email: v('su-email').trim(), password: v('su-password') };
+    return { dob: v('dob'), terms: c('agree-terms'), marketing: c('agree-marketing'), name: v('su-name').trim().slice(0, 50), email: v('su-email').trim(), password: v('su-password'), website: v('su-website') };
   }
   function focusInvalid() {
     var bad = document.querySelector('[aria-invalid="true"]');
@@ -1276,7 +1278,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       method: 'POST',
       headers: { 'Content-Type': 'application/json', apikey: LIVE_CFG.key },
       body: JSON.stringify({ email: f.email, password: f.password, display_name: f.name, dob: f.dob, accepted_terms: true,
-        terms_version: TERMS_VERSION, privacy_version: PRIVACY_VERSION, marketing: f.marketing, invite: INVITE })
+        terms_version: TERMS_VERSION, privacy_version: PRIVACY_VERSION, marketing: f.marketing, invite: INVITE, website: f.website || '' })
     }).then(function (r) { return r.json(); }).then(function (out) {
       if (!out || !out.ok) {
         UI.busy = false;
@@ -1519,7 +1521,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     if (changed) {
       var first = UI.last === null;
       UI.last = scr;
-      window.scrollTo(0, 0);
+      root.scrollTo(0, 0);
       if (!first) { var h1 = root.querySelector('h1'); if (h1) h1.focus({ preventScroll: true }); }
     } else if (key) {
       var again = document.querySelector(key);
@@ -1636,7 +1638,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       UI.pending = [];
       UI.feedTab = 'foryou';
       render();
-      window.scrollTo(0, 0);
+      root.scrollTo(0, 0);
       var ft = document.getElementById('page-title');
       if (ft) ft.focus({ preventScroll: true });
       announce(count + ' new Flex' + (count === 1 ? '' : 'es') + ' added to the top of the feed');
@@ -1681,7 +1683,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
           UI.remote.unshift(np); UI.remoteIds[np.id] = true;
           UI.sheet = null; UI.opener = null; UI.feedTab = 'foryou'; UI.justAdded = [np.id]; renderSheet();
           if (current() === 'feed') render(); else go('feed');
-          window.scrollTo(0, 0); toast('You just posted a Flex');
+          root.scrollTo(0, 0); toast('You just posted a Flex');
           setTimeout(function () { UI.justAdded = []; }, 900);
         });
         return;
@@ -1689,7 +1691,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       S.myPosts.unshift({ id: 'm' + Date.now(), at: Date.now(), body: body || null, milestone: msKey, cheers: 0, replies: 0, reposts: 0 });
       save(); UI.sheet = null; UI.opener = null; UI.feedTab = 'foryou'; UI.justAdded = [S.myPosts[0].id]; renderSheet();
       if (current() === 'feed') render(); else go('feed');
-      window.scrollTo(0, 0); toast('You just posted a Flex');
+      root.scrollTo(0, 0); toast('You just posted a Flex');
       setTimeout(function () { UI.justAdded = []; }, 900);
     }
     else if (a === 'share-rank') {
@@ -1717,7 +1719,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       (adding ? sb.from('follows').insert({ followee_id: fp.authorId }) : sb.from('follows').delete().eq('follower_id', S.me).eq('followee_id', fp.authorId)).then(function (r) {
         if (r.error) {
           if (adding) S.followingIds = S.followingIds.filter(function (x) { return x !== fp.authorId; }); else S.followingIds.push(fp.authorId);
-          save(); render(); toast(adding ? "This member isn't accepting followers." : "Couldn't unfollow. Try again.");
+          save(); render(); toast(adding ? errText(r.error, "This member isn't accepting followers.") : "Couldn't unfollow. Try again.");
           return;
         }
         if (UI.myCounts) UI.myCounts.following_count += adding ? 1 : -1;
@@ -1730,7 +1732,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       var on = !cp.cheeredByMe;
       cp.cheeredByMe = on; cp.cheers += on ? 1 : -1; render(); announce(on ? 'Flexed' : 'Flex removed');
       (on ? sb.from('cheers').insert({ post_id: cp.dbId }) : sb.from('cheers').delete().eq('post_id', cp.dbId).eq('user_id', S.me)).then(function (r) {
-        if (r.error) { cp.cheeredByMe = !on; cp.cheers += on ? -1 : 1; render(); toast("Couldn't save your Flex. Try again."); }
+        if (r.error) { cp.cheeredByMe = !on; cp.cheers += on ? -1 : 1; render(); toast(errText(r.error, "Couldn't save your Flex. Try again.")); }
       });
     }
     else if (a === 'delete-live') {
@@ -1752,7 +1754,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       var hideIt = function (msg) { if (rp) S.hiddenPosts.push(rp.id); save(); UI.opener = null; closeSheet(); render(); toast(msg); };
       if (rp && rp.live && isLive()) {
         sb.from('reports').insert({ target_type: 'post', target_id: rp.dbId, reason: reason.value, details: details || null }).then(function (r) {
-          if (r.error) { toast("Couldn't send your report. Try again."); return; }
+          if (r.error) { toast(errText(r.error, "Couldn't send your report. Try again.")); return; }
           hideIt('Report sent to the Wealthy team. We\'ve hidden the Flex for you.');
         });
       } else {
@@ -1765,7 +1767,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       if (!bp) { closeSheet(); return; }
       if (bp.live && isLive()) {
         sb.from('blocks').insert({ blocked_id: bp.authorId }).then(function (r) {
-          if (r.error) { toast("Couldn't block this member. Try again."); return; }
+          if (r.error) { toast(errText(r.error, "Couldn't block this member. Try again.")); return; }
           S.blockedNames[bp.authorId] = bp.name;
           S.followingIds = S.followingIds.filter(function (x) { return x !== bp.authorId; }); save();
           UI.remote = UI.remote.filter(function (x) { return x.authorId !== bp.authorId; });
