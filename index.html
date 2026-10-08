@@ -279,8 +279,14 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
 .icon-btn--plain { width: 44px; height: 44px; margin-right: -10px; border-color: transparent; color: var(--muted); }
 .icon-btn--plain svg circle { fill: currentColor; stroke: none; }
 .btn--center { align-self: center; }
+.feed-list--profile { margin: 0 -20px; border-top: 1px solid var(--line-soft); }
+.empty--card { padding: 20px; border: 1px dashed var(--border); border-radius: 16px; }
+.compose-tip { display: flex; align-items: center; gap: 6px; margin: 0; }
+.compose-tip svg { width: 14px; height: 14px; color: var(--accent); flex-shrink: 0; }
 .boost-btn { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--accent); background: transparent; color: var(--accent); font-size: 13px; font-weight: 700; cursor: pointer; }
 .boost-btn svg { width: 15px; height: 15px; }
+.boost-wait { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted); }
+.boost-wait svg { width: 13px; height: 13px; }
 .boost-label { align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px 3px 7px; border-radius: 999px; background: var(--ink); color: var(--on-ink); font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .boost-label svg { width: 13px; height: 13px; }
 .post--boosted { box-shadow: inset 3px 0 0 var(--accent); }
@@ -438,7 +444,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     supportEmail: '[SUPPORT EMAIL]',
     privacyEmail: '[PRIVACY EMAIL]'
   }, window.WEALTHY_BUSINESS || {});
-  var APP_VERSION = 'Test version 0.3';
+  var APP_VERSION = 'Test version 0.4';
   var TERMS_VERSION = '1.1';
   var PRIVACY_VERSION = '1.1';
   var LEGAL_VERSIONS = { terms: TERMS_VERSION, privacy: PRIVACY_VERSION };
@@ -512,7 +518,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   }
   var S = load();
   var C = loadConsent();
-  var UI = { liveBoosts: {}, boostHours: 1, boostError: '', boostBlocked: false, docs: {}, docLoading: null, docFailed: null, needsReaccept: null, reacceptError: '', signup: 'demo', busy: false, loginError: '', remote: [], remoteIds: {}, myCounts: null, target: null, scope: 'city', feedTab: 'foryou', feedLoading: false, feedTimer: null, queue: [], pending: [], live: [], justAdded: [], sheet: null, opener: null, last: null, showConsent: false, form: { error: '', dobError: '' } };
+  var UI = { myLastBoostAt: 0, liveBoosts: {}, boostHours: 1, boostError: '', boostBlocked: false, docs: {}, docLoading: null, docFailed: null, needsReaccept: null, reacceptError: '', signup: 'demo', busy: false, loginError: '', remote: [], remoteIds: {}, myCounts: null, target: null, scope: 'city', feedTab: 'foryou', feedLoading: false, feedTimer: null, queue: [], pending: [], live: [], justAdded: [], sheet: null, opener: null, last: null, showConsent: false, form: { error: '', dobError: '' } };
 
   /* ---------- Sample data (clearly labeled in the interface) ---------- */
   var SCOPES = {
@@ -771,8 +777,8 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
 
   /* ---------- Shared pieces ---------- */
   function demoBar() {
-    if (S.mode === 'live') return '<p class="demo-bar"><strong>Live test account.</strong> Your profile, photo, Flexes and follows are shared with other testers. Ranks, amounts and wealth figures are still made-up samples.</p>';
-    return '<p class="demo-bar"><strong>Test version.</strong> Members, ranks, amounts and Flexes are made-up samples. In the demo, nothing you enter leaves this device.</p>';
+    if (S.mode === 'live') return '<p class="demo-bar"><strong>Live test account (' + APP_VERSION.replace('Test version ', 'v') + ').</strong> Your profile, photo, Flexes and follows are shared with other testers. Ranks, amounts and wealth figures are still made-up samples.</p>';
+    return '<p class="demo-bar"><strong>' + APP_VERSION + '.</strong> Members, ranks, amounts and Flexes are made-up samples. In the demo, nothing you enter leaves this device.</p>';
   }
   function stepHeader(back, step) {
     var right = step
@@ -1051,7 +1057,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
         (p.body ? '<p class="post-body">' + esc(p.body) + '</p>' : '') +
         (ms ? artFigure(p.milestone) : '') +
         '<span class="sample-tag">' + tag + '</span>' +
-        (mine && !boost ? '<button class="boost-btn" data-action="boost-open" data-id="' + esc(p.id) + '">' + I.boost + 'Boost this Flex</button>' : '') +
+        (mine && !boost ? (nextBoostAt() ? '<span class="boost-wait">' + I.boost + 'Next Boost available ' + boostDate(nextBoostAt()) + '</span>' : '<button class="boost-btn" data-action="boost-open" data-id="' + esc(p.id) + '">' + I.boost + 'Boost this Flex</button>') : '') +
         '<div class="actions">' +
           '<button class="act" data-action="reply" data-id="' + esc(p.id) + '" aria-label="Reply, ' + fmtCount(replies) + ' replies">' + I.comment + '<span aria-hidden="true">' + fmtCount(replies) + '</span></button>' +
           '<button class="act act--repost" data-action="repost" data-id="' + esc(p.id) + '" aria-pressed="' + reposted + '" aria-label="Repost, ' + fmtCount(reposts) + ' reposts">' + I.repost + '<span aria-hidden="true">' + fmtCount(reposts) + '</span></button>' +
@@ -1477,6 +1483,11 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     var until = last + BOOST_DAYS * 864e5;
     return last && until > Date.now() ? until : null;
   }
+  function nextBoostAt() {
+    if (!isLive()) return demoBoostBlockedUntil();
+    var until = UI.myLastBoostAt ? UI.myLastBoostAt + BOOST_DAYS * 864e5 : 0;
+    return until > Date.now() ? until : null;
+  }
   function boostTime(ms) {
     var d = new Date(ms), now = new Date();
     var t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
@@ -1489,6 +1500,11 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       var map = {};
       (r && r.data || []).forEach(function (b) { map[b.post_id] = b.ends_at; });
       UI.liveBoosts = map;
+      return sb.from('boosts').select('paid_at, status').eq('user_id', S.me).then(function (m) {
+        var paid = (m && m.data || []).filter(function (x) { return x.paid_at && ['active', 'completed', 'stopped'].indexOf(x.status) !== -1; })
+          .map(function (x) { return Date.parse(x.paid_at); });
+        UI.myLastBoostAt = paid.length ? Math.max.apply(null, paid) : 0;
+      });
     }, function () {});
   }
   function boostSheet() {
@@ -1551,7 +1567,26 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       '</div>' +
       '<section class="card card--tight" aria-labelledby="h-nw"><div class="card-top"><h2 class="eyebrow" id="h-nw" style="margin:0">Net worth (sample)</h2><span class="pill">' + publicAs() + '</span></div><span class="nw">$2.41M</span><span class="small">Only you see the exact figure. <a class="inline-link" href="#wealth">See breakdown</a></span></section>' +
       '<section class="stack-md" aria-labelledby="h-stand"><h2 class="h2" id="h-stand">Where you stand</h2><div class="tiles">' + tiles + '</div></section>' +
+      myFlexesSection() +
       '</section>';
+  }
+  function myFlexes() {
+    if (isLive()) return UI.remote.filter(function (p) { return p.mine; });
+    return S.myPosts.map(function (p) { return Object.assign({ mine: true }, p); });
+  }
+  function myFlexesSection() {
+    var mine = myFlexes();
+    var boosted = mine.filter(function (p) { return activeBoost(p); })[0];
+    var until = nextBoostAt();
+    var intro = boosted
+      ? '<p class="small">One of your Flexes is boosted until ' + boostTime(activeBoost(boosted).endsAt) + '.</p>'
+      : until
+        ? '<p class="small">Your next Boost is available ' + boostDate(until) + '. You can boost one Flex every ' + BOOST_DAYS + ' days.</p>'
+        : '<p class="small">Boost a Flex to put it at the top of everyone\'s For you feed: $' + BOOST_PRICE + ' an hour, up to ' + BOOST_MAX_HOURS + ' hours, once every ' + BOOST_DAYS + ' days.</p>';
+    var body = mine.length
+      ? '<div class="feed-list feed-list--profile">' + mine.map(postHTML).join('') + '</div>'
+      : '<div class="empty empty--card"><p class="lede">You haven\'t posted a Flex yet. Post one, then boost it to the top of the feed.</p><button class="btn btn--primary btn--sm" data-action="compose">Post a Flex</button></div>';
+    return '<section class="stack-md" aria-labelledby="h-myflexes"><div class="stack-xs"><h2 class="h2" id="h-myflexes">Your Flexes</h2>' + intro + '</div>' + body + '</section>';
   }
 
   /* ---------- Sheets (dialogs) ---------- */
@@ -1560,6 +1595,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       return '<div class="sheet-backdrop" data-action="close-sheet"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">' +
         '<div class="sheet-head"><h2 class="h2" id="sheet-title">Post a Flex</h2><button class="icon-btn" data-action="close-sheet" aria-label="Close">' + I.close + '</button></div>' +
         '<label class="sr" for="compose-text">What are you flexing?</label><textarea class="input textarea" id="compose-text" maxlength="500" placeholder="What are you flexing?" aria-describedby="compose-count"></textarea>' +
+        '<p class="small compose-tip">' + I.boost + 'After posting, you can boost your Flex to the top of the feed.</p>' +
         '<fieldset class="ms-pick"><legend>Add a milestone (optional)</legend><div class="ms-chips">' +
           '<label class="ms-chip"><input type="radio" name="ms" value="" checked><span>None</span></label>' +
           COMPOSE_MILESTONES.map(function (k) { return '<label class="ms-chip"><input type="radio" name="ms" value="' + k + '"><span>' + esc(MILESTONES[k].label) + '</span></label>'; }).join('') +
