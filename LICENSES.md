@@ -4,6 +4,7 @@ Everything that ships in this repository, and the license that covers it.
 
 | Asset | Where it's used | Source and license |
 | --- | --- | --- |
+| Supabase JavaScript library (`supabase.js`, v2.117.2) | Sign-in and live test accounts | © 2020 Supabase. MIT License (notice kept at the top of the file). Bundled with the site, not loaded from a CDN. |
 | Montserrat font (weights 400–700, Latin characters) | App and policy pages | © The Montserrat Project Authors. SIL Open Font License 1.1, included at `OFL.txt`. The license declares no Reserved Font Name, so the trimmed copy may keep the name. Bundled with the site; no request goes to Google Fonts. |
 | Money bag logo | App header, load-in screen, policy pages, home-screen icons | Original artwork created for Wealthy. No third-party source. |
 | Interface icons (tab bar, buttons, badges) | App | Original artwork drawn in code. No icon library is used. |
