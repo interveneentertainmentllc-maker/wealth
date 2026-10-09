@@ -423,7 +423,11 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
 .land-tick { flex-shrink: 0; margin-top: 2px; color: var(--accent); }
 .land-cta { display: flex; flex-direction: column; gap: 16px; padding: 24px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); }
 .land-foot { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
-.nav-brand { display: none; }
+.tabbar .nav-brand, .tabbar .nav-post { display: none; }
+.col-main, .col-side { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.desk-only { display: none !important; }
+.rail-row { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line-soft); }
+.rail-rank { font-size: 17px; font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
 
 /* Computers and wide tablets */
 @media (min-width: 960px) {
@@ -450,11 +454,28 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   .tabbar a { flex-direction: row; justify-content: flex-start; gap: 14px; min-height: 50px; padding: 0 14px; border-radius: 14px; font-size: 15px; letter-spacing: 0; }
   .tabbar a[data-tab]:hover { background: var(--surface); color: var(--ink); }
   .tabbar a[aria-current="page"] { background: var(--surface); }
-  body.with-nav .fab { right: max(24px, calc((100vw - 248px - 640px) / 2 - 84px)); bottom: 32px; }
+  body.with-nav .fab { display: none; }
+  .tabbar .nav-post { display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-top: 18px; min-height: 50px; width: 100%; }
+  .tabbar .nav-post svg { width: 18px; height: 18px; }
   body.with-nav .new-pill { left: calc(50% + 124px); }
   body.with-nav .toast { left: calc(50% + 124px); bottom: 32px; }
   .sheet-backdrop { align-items: center; }
   .sheet { max-width: 520px; border-radius: 20px; max-height: 86%; }
+}
+@media (min-width: 1180px) {
+  .desk-only { display: flex !important; }
+  .mob-only { display: none; }
+  body.with-nav .app > .screen.wide { max-width: 1120px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 48px; row-gap: 22px; align-items: start; }
+  .screen.wide > .topbar, .screen.wide > .demo-bar { grid-column: 1 / -1; }
+  .screen.wide > .col-main { grid-column: 1; grid-row: 3; }
+  .screen.wide > .col-side { grid-column: 2; grid-row: 3; }
+  body.with-nav .app > .screen--feed.wide { grid-template-columns: minmax(0, 1fr) 340px; }
+  .screen--feed > .col-side { position: sticky; top: 24px; }
+  .screen.wide .feed-tabs { margin: 0; padding: 0; }
+  .screen.wide .feed-list { margin: 0; }
+  .screen.wide .feed-list .post { padding-left: 0; padding-right: 0; }
+  .screen.wide .feed-list--profile { margin: 0; }
+  .screen--rankings .seg { max-width: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
@@ -496,7 +517,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     supportEmail: '[SUPPORT EMAIL]',
     privacyEmail: '[PRIVACY EMAIL]'
   }, window.WEALTHY_BUSINESS || {});
-  var APP_VERSION = 'Test version 0.4';
+  var APP_VERSION = 'Test version 0.5';
   var TERMS_VERSION = '1.1';
   var PRIVACY_VERSION = '1.1';
   var LEGAL_VERSIONS = { terms: TERMS_VERSION, privacy: PRIVACY_VERSION };
@@ -1061,9 +1082,10 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     var seg = Object.keys(SCOPES).map(function (k) {
       return '<button data-action="scope" data-scope="' + k + '" aria-pressed="' + (k === UI.scope) + '">' + SCOPES[k].label + '</button>';
     }).join('');
-    return '<section class="screen has-tabs">' +
+    return '<section class="screen screen--rankings wide has-tabs">' +
       topbar('<button class="icon-btn" data-action="soon" data-msg="Member search isn\'t in this test version yet." aria-label="Search members">' + I.search + '</button>') +
       demoBar() +
+      '<div class="col-main">' +
       '<div class="stack-xs"><span class="eyebrow">' + d.eyebrow + '</span><h1 class="title" tabindex="-1">' + d.place + '</h1></div>' +
       '<div class="seg" role="group" aria-label="Ranking level">' + seg + '</div>' +
       '<section class="card" aria-label="Your sample position">' +
@@ -1071,7 +1093,9 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
         '<div class="stat-grid"><div class="stack-2"><span class="stat-big">Top ' + d.topM + '</span><span class="small">of Wealthy members</span></div><div class="stack-2"><span class="stat-big">Top ' + d.topR + '</span><span class="small">' + d.resLabel + '</span></div></div>' +
         privacyNote(UI.scope) +
       '</section>' +
+      '</div><div class="col-side">' +
       '<section aria-labelledby="h-top"><div class="list-head"><h2 class="h2" id="h-top">Top members</h2><span class="small">Sample members</span></div>' + d.rows.map(memberRow).join('') + '</section>' +
+      '</div>' +
       '</section>';
   }
 
@@ -1142,6 +1166,19 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
         '</div>' +
       '</div></article>';
   }
+  function feedRail() {
+    var rows = TILES.map(function (t) {
+      return '<div class="rail-row"><span class="small">' + t.label + '</span><span class="rail-rank">' + t.rank + '</span></div>';
+    }).join('');
+    return '<aside class="col-side desk-only" aria-label="Your summary">' + updateCard() +
+      '<section class="card card--tight" aria-labelledby="h-rail-stand"><h2 class="eyebrow" id="h-rail-stand" style="margin:0">Where you stand (sample)</h2>' + rows +
+        '<a class="inline-link" href="#rankings">See all rankings</a></section>' +
+      '<section class="card card--tight" aria-labelledby="h-rail-boost"><h2 class="eyebrow" id="h-rail-boost" style="margin:0">Boost a Flex</h2>' +
+        '<p class="small">Put one of your Flexes at the top of everyone\'s For you feed: $' + BOOST_PRICE + ' an hour, up to ' + BOOST_MAX_HOURS + ' hours, once every ' + BOOST_DAYS + ' days.</p>' +
+        '<a class="inline-link" href="#profile">Boost from your Profile</a></section>' +
+      legalLinks('footer-links') +
+      '</aside>';
+  }
   function updateCard() {
     var u = UPDATES[S.loc];
     return '<section class="card card--tight" aria-label="Your sample update"><span class="eyebrow eyebrow--accent">This month</span>' +
@@ -1167,13 +1204,15 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       ? '<div class="empty"><p class="lede">Follow members to see their Flexes here.</p><button class="btn btn--outline btn--sm" data-action="feed-tab" data-key="foryou">Find people in For you</button></div>'
       : '<div class="empty"><p class="lede">No Flexes here yet.</p><button class="btn btn--outline btn--sm" data-action="compose">Post a Flex</button></div>';
     var list = UI.feedLoading ? skeletons(3) : (posts.length ? posts.map(postHTML).join('') : empty);
-    return '<section class="screen has-tabs">' +
+    return '<section class="screen screen--feed wide has-tabs">' +
       topbar('<button class="icon-btn" data-action="soon" data-msg="Search isn\'t in this test version yet." aria-label="Search">' + I.search + '</button>') +
       demoBar() +
+      '<div class="col-main">' +
       '<h1 class="sr" id="page-title" tabindex="-1">Feed, ' + tabName + '</h1>' +
       '<div class="feed-tabs" role="group" aria-label="Choose a feed">' + tabs + '</div>' +
-      (UI.feedTab === 'foryou' && !UI.feedLoading ? updateCard() : '') +
+      (UI.feedTab === 'foryou' && !UI.feedLoading ? '<div class="mob-only">' + updateCard() + '</div>' : '') +
       '<div class="feed-list" aria-busy="' + UI.feedLoading + '">' + list + '</div>' +
+      '</div>' + feedRail() +
       '<button class="fab" data-action="compose" aria-label="Post a Flex">' + I.plus + '</button>' +
       '</section>';
   }
@@ -1614,14 +1653,17 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
   function wealth() {
     var bar = MIX.map(function (m) { return '<span style="flex:' + m.w + ' 1 0;background:var(' + m.c + ')"></span>'; }).join('');
     var legend = MIX.map(function (m) { return '<li class="legend-item"><span class="swatch" aria-hidden="true" style="background:var(' + m.c + ')"></span><span>' + m.label + '</span><span class="small push">' + m.pct + '</span></li>'; }).join('');
-    return '<section class="screen has-tabs">' +
+    return '<section class="screen screen--wealth wide has-tabs">' +
       topbar('<a class="icon-btn icon-btn--solid" href="#add" aria-label="Add an asset or debt">' + I.plus + '</a>') +
       demoBar() +
+      '<div class="col-main">' +
       '<div class="stack-xs"><span class="eyebrow">Your wealth</span><h1 class="big-num" tabindex="-1">$2,413,870</h1><span class="small">Sample net worth for testing</span></div>' +
       '<div class="totals"><div class="stack-2"><span class="eyebrow">Assets</span><span class="total">$3,263,000</span></div><div class="stack-2"><span class="eyebrow">Liabilities</span><span class="total">−$849,130</span></div></div>' +
       '<section class="stack-md" aria-labelledby="h-mix"><h2 class="sr" id="h-mix">Asset mix</h2><div class="mix-bar" aria-hidden="true">' + bar + '</div><ul class="legend">' + legend + '</ul></section>' +
+      '</div><div class="col-side">' +
       '<section aria-labelledby="h-assets"><div class="list-head"><h2 class="h2" id="h-assets">Assets</h2><span class="small">Status</span></div>' + ASSETS.map(itemRow).join('') + '</section>' +
       '<section aria-labelledby="h-debts"><div class="list-head"><h2 class="h2" id="h-debts">Liabilities</h2><span class="small">Subtracted from net worth</span></div>' + DEBTS.map(itemRow).join('') + '</section>' +
+      '</div>' +
       '</section>';
   }
 
@@ -1632,9 +1674,10 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       return '<div class="tile"><span class="eyebrow">' + t.label + '</span><span class="tile-rank">' + t.rank + '</span><span class="small">' + t.top + '</span>' + (hidden ? '<span class="only-you">Only you</span>' : '') + '</div>';
     }).join('');
     var j = joined();
-    return '<section class="screen has-tabs">' +
+    return '<section class="screen screen--profile wide has-tabs">' +
       topbar('<a class="icon-btn" href="#settings" aria-label="Settings">' + I.sliders + '</a>') +
       demoBar() +
+      '<div class="col-main">' +
       '<div class="profile-head">' +
         '<div class="avatar-wrap">' + avatarHTML(initials(name), S.photo, 104, true, S.photo ? 'Profile photo of ' + name : '') +
           '<button class="camera" data-action="pick-photo" data-target="photo-input-profile" aria-label="' + (S.photo ? 'Change profile photo' : 'Add profile photo') + '">' + I.camera + '</button>' +
@@ -1645,7 +1688,7 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
       '</div>' +
       '<section class="card card--tight" aria-labelledby="h-nw"><div class="card-top"><h2 class="eyebrow" id="h-nw" style="margin:0">Net worth (sample)</h2><span class="pill">' + publicAs() + '</span></div><span class="nw">$2.41M</span><span class="small">Only you see the exact figure. <a class="inline-link" href="#wealth">See breakdown</a></span></section>' +
       '<section class="stack-md" aria-labelledby="h-stand"><h2 class="h2" id="h-stand">Where you stand</h2><div class="tiles">' + tiles + '</div></section>' +
-      myFlexesSection() +
+      '</div><div class="col-side">' + myFlexesSection() + '</div>' +
       '</section>';
   }
   function myFlexes() {
@@ -1810,7 +1853,10 @@ legend { padding: 0; margin-bottom: 10px; font-size: 20px; font-weight: 500; let
     tabbar.hidden = !isTab;
     document.body.classList.toggle('with-nav', isTab);
     document.body.classList.toggle('on-welcome', scr === 'welcome');
-    if (!tabbar.querySelector('.nav-brand')) tabbar.insertAdjacentHTML('afterbegin', '<a class="nav-brand" href="#rankings">' + bagSVG(28) + '<span class="wordmark">Wealthy</span></a>');
+    if (!tabbar.querySelector('.nav-brand')) {
+      tabbar.insertAdjacentHTML('afterbegin', '<a class="nav-brand" href="#rankings">' + bagSVG(28) + '<span class="wordmark">Wealthy</span></a>');
+      tabbar.insertAdjacentHTML('beforeend', '<button class="btn btn--primary nav-post" data-action="compose">' + I.plus + 'Post a Flex</button>');
+    }
     Array.prototype.forEach.call(tabbar.querySelectorAll('a'), function (a) {
       if (a.getAttribute('data-tab') === scr) a.setAttribute('aria-current', 'page');
       else a.removeAttribute('aria-current');
